@@ -1,0 +1,233 @@
+/*
+ * Neon Genesis
+ * Copyright (C) 2026 Leandro Cardoso de Andrade (@kyogoiano <leandro.ueg@gmail.com>)
+ * Original Genesis Project Copyright (C) 2004-2009 Summa Technologies do Brasil Ltda.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.neongenesis.ui.swing.components;
+
+import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
+
+import dev.neongenesis.ui.binding.BoundDataProvider;
+import dev.neongenesis.ui.binding.BoundField;
+import dev.neongenesis.ui.metadata.DataProviderMetadata;
+import dev.neongenesis.ui.swing.SwingBinder;
+import dev.neongenesis.util.Bundle;
+
+public class JComboBoxComponentBinder extends AbstractComponentBinder {
+   public BoundDataProvider bind(SwingBinder binder, Component component,
+      DataProviderMetadata dataProviderMetadata) {
+      return new JComboBoxBoundMember(binder, (JComboBox) component,
+         dataProviderMetadata);
+   }
+
+   public class JComboBoxBoundMember extends AbstractBoundMember
+         implements BoundField, BoundDataProvider {
+      private final JComboBox component;
+      private final DataProviderMetadata dataProviderMetadata;
+      private final ActionListener listener;
+
+      public JComboBoxBoundMember(SwingBinder binder, JComboBox component,
+            DataProviderMetadata dataProviderMetadata) {
+         super(binder, component);
+         this.component = component;
+         this.dataProviderMetadata = dataProviderMetadata;
+
+         this.component.addActionListener(listener = createActionListener());
+      }
+
+      protected JComboBox getComponent() {
+         return component;
+      }
+
+      protected DataProviderMetadata getDataProviderMetadata() {
+         return dataProviderMetadata;
+      }
+
+      protected ActionListener getListener() {
+         return listener;
+      }
+
+      protected ActionListener createActionListener() {
+         return new ActionListener() {
+            public void actionPerformed(ActionEvent event) {
+               getBinder().updateFormSelection(getDataProviderMetadata(), getIndexes());
+            }
+         };
+      }
+
+      protected int[] getIndexes() {
+         int selectedIndex = component.getSelectedIndex();
+         return getBinder().getIndexesFromUI(
+               (selectedIndex < 0) ? new int[0] : new int[] { selectedIndex },
+               isBlank(component));
+      }
+
+      public void updateIndexes(int[] indexes) {
+         indexes = getBinder()
+                         .getIndexesFromController(indexes, isBlank(component));
+
+         if (indexes.length > 1) {
+            throw new IllegalArgumentException(Bundle.getMessage(
+                  JComboBoxComponentBinder.class,
+                  "LENGTH_OF_SELECTED_INDEXES_MUST_BE_ONE_OR_LESS")); // NOI18N
+         } else if (indexes.length == 0) {
+            indexes = new int[] { -1 };
+         }
+
+         if (component.getSelectedIndex() == indexes[0]) {
+            return;
+         }
+
+         deactivateListeners();
+         try {
+            component.setSelectedIndex(indexes[0]);
+         } finally {
+            reactivateListeners();
+         }
+      }
+
+      public void updateList(List list) throws Exception {
+         deactivateListeners();
+         try {
+            boolean isBlank = isBlank(component);
+
+            int selected = component.getSelectedIndex();
+            if (dataProviderMetadata.isResetSelection()) {
+               selected = isBlank ? 0 : -1;
+            } else {
+               selected = selected <= list.size() ? selected : isBlank ? 0 : -1;
+            }
+
+            createComboBoxModelAdapter().setData(getData(list));
+
+            component.setSelectedIndex(selected);
+         } finally {
+            reactivateListeners();
+         }
+      }
+
+      public String getValue() throws Exception {
+         if (dataProviderMetadata.getObjectField() == null) {
+            return null;
+         }
+
+         if (isBlank(component) && component.getSelectedIndex() == 0) {
+            return null;
+         }
+
+         return getKey(component.getSelectedItem());
+      }
+
+      public void setValue(Object value) throws Exception {
+         if (dataProviderMetadata.getObjectField() == null) {
+            return;
+         }
+
+         boolean isBlank = isBlank(component);
+
+         int found = -1;
+
+         if (value != null) {
+            String selectedKey = getKey(value);
+
+            int size = component.getItemCount();
+
+            for (int i = isBlank ? 1 : 0; i < size; i++) {
+               Object o = component.getItemAt(i);
+
+               if (selectedKey.equals(getKey(o))) {
+                  found = i;
+
+                  break;
+               }
+            }
+         } else if (isBlank) {
+            found++;
+         }
+
+         deactivateListeners();
+         try {
+            component.setSelectedIndex(found);
+         } finally {
+            reactivateListeners();
+         }
+      }
+
+      protected Object[] getData(List list) throws Exception {
+         boolean isBlank = isBlank(component);
+         Object[] values = new Object[isBlank ? (list.size() + 1) : list.size()];
+
+         int i = 0;
+
+         if (isBlank) {
+            String blankLabel = (String) component
+                  .getClientProperty(SwingBinder.BLANK_LABEL_PROPERTY);
+            values[i] = (blankLabel == null) ? "" : blankLabel; // NOI18N
+            i++;
+         }
+
+         for (Iterator iter = list.iterator(); iter.hasNext(); i++) {
+            values[i] = iter.next();
+         }
+
+         return values;
+      }
+
+      protected ComboBoxModelAdapter createComboBoxModelAdapter() {
+         return new ComboBoxModelAdapter() {
+            public void setData(Object[] data) {
+               DefaultComboBoxModel model = (DefaultComboBoxModel) component
+                     .getModel();
+
+               model.removeAllElements();
+
+               for (int i = 0; i < data.length; i++) {
+                  model.addElement(data[i]);
+               }
+            }
+         };
+      }
+
+      protected String getKey(Object value) throws Exception {
+         return ComponentBinderHelper.getKey(getBinder(), component, getName(), 
+               value);
+      }
+
+      protected void deactivateListeners() {
+         if (listener != null) {
+            component.removeActionListener(listener);
+         }
+      }
+
+      protected void reactivateListeners() {
+         if (listener != null) {
+            component.addActionListener(listener);
+         }
+      }
+
+      public void unbind() {
+         if (listener != null) {
+            component.removeActionListener(listener);
+         }
+      }
+   }
+}

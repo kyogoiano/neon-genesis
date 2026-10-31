@@ -1,0 +1,8 @@
+Neon Genesis
+Copyright 2026 Leandro Cardoso de Andrade (@kyogoiano <leandro.ueg@gmail.com>)
+https://github.com/kyogoiano/neon-genesis
+
+This product is a modernized fork and derivative work of The Genesis Project
+(originally Copyright 2004-2009 Summa Technologies do Brasil Ltda.,https://genesis.dev.java.net/),
+modernized for JDK 21, Jakarta EE 11 (Web Profile EJB Lite + CDI and Core Profile Helidon Níma SE + CDI Lite),
+Hibernate 6, Swing, and OpenJFX.

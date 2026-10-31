@@ -1,0 +1,10 @@
+rootProject.name = 'neon-genesis'
+
+include 'annotation', 'shared', 'server', 'client', 'aspect', 'tests'
+
+project(':annotation').projectDir = file('modules/annotation')
+project(':shared').projectDir = file('modules/shared')
+project(':server').projectDir = file('modules/server')
+project(':client').projectDir = file('modules/client')
+project(':aspect').projectDir = file('modules/aspect')
+project(':tests').projectDir = file('modules/tests')

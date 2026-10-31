@@ -1,0 +1,322 @@
+plugins {
+    id 'java'
+    id 'base'
+}
+
+configurations {
+    aspectjTools
+}
+
+dependencies {
+    aspectjTools libs.aspectj.tools
+}
+
+group = 'dev.neongenesis'
+version = '3.6.0'
+
+def osName = System.getProperty('os.name').toLowerCase()
+def javafxPlatform = osName.contains('win') ? 'win' : (osName.contains('mac') ? 'mac' : 'linux')
+def javafxVersion = libs.versions.javafx.get()
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+
+    group = rootProject.group
+    version = rootProject.version
+
+    sourceSets {
+        main {
+            java.setSrcDirs(['src'])
+            resources.setSrcDirs([])
+        }
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
+            options.release.set(21)
+        }
+    }
+
+    tasks.named('jar') {
+        archiveBaseName.set("neon-genesis-${project.name}")
+    }
+}
+
+project(':shared') {
+    sourceSets.main.java.srcDir project(':annotation').file('src')
+    sourceSets.main.resources.srcDir('src')
+    sourceSets.main.resources.include('**/Bundle*.properties')
+
+    dependencies {
+        api libs.hibernate.core
+        api libs.jakarta.transaction.api
+        api libs.commons.beanutils
+        api libs.commons.logging
+    }
+}
+
+project(':server') {
+    sourceSets.main.resources.srcDir('src')
+    sourceSets.main.resources.include('META-INF/**')
+
+    dependencies {
+        implementation project(':shared')
+        api libs.jakarta.ejb.api
+        api libs.jakarta.cdi.api
+        api libs.jakarta.inject.api
+        api libs.jakarta.interceptor.api
+        implementation libs.helidon.webserver
+        implementation libs.helidon.webclient
+        compileOnly libs.jakarta.annotation.api
+    }
+}
+
+project(':client') {
+    sourceSets.main.resources.srcDir('src')
+    sourceSets.main.resources.include('**/Bundle*.properties')
+    sourceSets.main.resources.include('**/*.xml')
+    sourceSets.test.java.setSrcDirs(['test-src'])
+    sourceSets.test.resources.setSrcDirs(['test-src'])
+    sourceSets.test.resources.include('**/*.properties')
+    evaluationDependsOn(':aspect')
+    dependencies {
+        implementation project(':shared')
+        implementation project(':annotation')
+        implementation libs.beanshell
+        implementation libs.commons.jxpath
+        implementation libs.commons.validator
+        implementation libs.jakarta.jstl.impl
+        implementation libs.jakarta.jstl.api
+        api libs.jakarta.jsp.api
+        compileOnly libs.jakarta.servlet.api
+        implementation libs.jakarta.el.api
+        implementation libs.jakarta.el.impl
+        implementation libs.rhino
+        implementation libs.rhino.engine
+        api "org.openjfx:javafx-base:${javafxVersion}:${javafxPlatform}"
+        api "org.openjfx:javafx-graphics:${javafxVersion}:${javafxPlatform}"
+        api "org.openjfx:javafx-controls:${javafxVersion}:${javafxPlatform}"
+        api "org.openjfx:javafx-fxml:${javafxVersion}:${javafxPlatform}"
+        testImplementation 'junit:junit:4.13.2'
+        testRuntimeOnly libs.aspectj.runtime
+        testRuntimeOnly project(':aspect')
+    }
+}
+
+project(':aspect') {
+    sourceSets.main.resources.srcDir('src')
+    sourceSets.main.resources.include('**/*.properties')
+
+    dependencies {
+        implementation project(':shared')
+        implementation project(':server')
+        implementation project(':client')
+        api libs.aspectj.runtime
+        implementation libs.jakarta.ejb.api
+        implementation libs.jakarta.cdi.api
+        implementation libs.jakarta.inject.api
+        implementation libs.helidon.webclient
+    }
+}
+
+project(':tests') {
+    def embeddedModule = layout.buildDirectory.dir('embedded/container')
+
+    sourceSets.main.java.setSrcDirs([])
+    sourceSets.main.resources.setSrcDirs([])
+
+    sourceSets {
+        integrationTest {
+            java.setSrcDirs(['src'])
+            resources.setSrcDirs(['src'])
+            resources.include('**/*.properties', '**/*.xml')
+        }
+    }
+
+    configurations {
+        integrationTestImplementation.extendsFrom(testImplementation)
+        integrationTestRuntimeOnly.extendsFrom(testRuntimeOnly)
+        openLibertyRuntime
+    }
+
+    configurations.named('integrationTestRuntimeClasspath') {
+        resolutionStrategy.force libs.hsqldb
+    }
+
+    tasks.register('prepareEmbeddedContainer', Sync) {
+        dependsOn tasks.named('integrationTestClasses')
+
+        from project(':annotation').sourceSets.main.output
+        from project(':shared').sourceSets.main.output
+        from project(':client').sourceSets.main.output
+        from project(':server').sourceSets.main.output
+        from project(':aspect').sourceSets.main.output
+        from sourceSets.integrationTest.output
+        from('src/embedded')
+        into embeddedModule
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+
+    dependencies {
+        testImplementation 'junit:junit:4.13.2'
+        integrationTestImplementation libs.hsqldb
+        testImplementation libs.commons.jxpath
+        testImplementation libs.commons.validator
+        testImplementation libs.jakarta.persistence.api
+        integrationTestImplementation libs.weld.se.core
+        integrationTestImplementation libs.jandex
+        integrationTestImplementation libs.helidon.webserver
+        integrationTestImplementation libs.helidon.webclient
+        openLibertyRuntime libs.openliberty.runtime
+        testImplementation project(':shared')
+        testImplementation project(':client')
+        testImplementation project(':server')
+        testImplementation project(':aspect')
+    }
+
+    tasks.register('integrationTest', Test) {
+        description = 'Runs the Core Profile integration suite in Helidon 4 Níma SE + CDI 4.1 Lite (excluding EJB tests).'
+        group = 'verification'
+        testClassesDirs = files(embeddedModule)
+        classpath = files(embeddedModule) + sourceSets.integrationTest.runtimeClasspath
+        systemProperty 'genesis.embedded.module', embeddedModule.get().asFile.absolutePath
+        systemProperty 'genesis.test.profile', 'core'
+        exclude '**/TestCase.class'
+        exclude '**/ValidatorTest.class'
+        exclude '**/EJBHibernateTransactionalInjectorTest.class'
+        exclude '**/EmbeddedContainerSmokeTest.class'
+        exclude '**/WebProfileCdiEjbTest.class'
+        useJUnit()
+        dependsOn tasks.named('prepareEmbeddedContainer')
+    }
+
+    tasks.register('webProfileIntegrationTest', Test) {
+        description = 'Runs the Web Profile (EJB Lite 4.0 + CDI 4.1) integration suite.'
+        group = 'verification'
+        testClassesDirs = files(embeddedModule)
+        classpath = files(embeddedModule) + sourceSets.integrationTest.runtimeClasspath
+        systemProperty 'genesis.embedded.module', embeddedModule.get().asFile.absolutePath
+        systemProperty 'genesis.test.profile', 'web'
+        include '**/EmbeddedContainerSmokeTest.class'
+        include '**/EJBHibernateTransactionalInjectorTest.class'
+        include '**/WebProfileCdiEjbTest.class'
+        include '**/HibernateCommandTest.class'
+        include '**/NoopCommandTest.class'
+        include '**/NoopQueryTest.class'
+        include '**/NoopTransactionTest.class'
+        useJUnit()
+        dependsOn tasks.named('prepareEmbeddedContainer')
+    }
+
+    tasks.named('check') {
+        dependsOn tasks.named('integrationTest')
+        dependsOn tasks.named('webProfileIntegrationTest')
+    }
+}
+
+tasks.named('build') {
+    dependsOn subprojects.collect { it.tasks.named('build') }
+}
+
+def aspectjWeaving = tasks.register('weaveAspectJ') {
+    group = 'build'
+    description = 'Post-compile weaves the Neon Genesis AspectJ aspects into project classes.'
+    outputs.upToDateWhen { false }
+
+    def compilationTasks = []
+    subprojects.each { subproject ->
+        subproject.sourceSets.each { sourceSet ->
+            def compileTask = subproject.tasks.findByName(sourceSet.getCompileTaskName('java'))
+            if (compileTask != null) {
+                compilationTasks.add(compileTask)
+            }
+        }
+    }
+    dependsOn compilationTasks
+
+    doLast {
+        def aspectClasses = project(':aspect').sourceSets.main.output.classesDirs.singleFile
+        if (!aspectClasses.exists()) {
+            throw new GradleException("AspectJ aspects were not compiled: ${aspectClasses}")
+        }
+
+        def classpathFiles = new LinkedHashSet<File>()
+        subprojects.each { subproject ->
+            subproject.sourceSets.each { sourceSet ->
+                classpathFiles.addAll(sourceSet.output.classesDirs.files)
+                classpathFiles.addAll(sourceSet.compileClasspath.files.findAll {
+                    !it.name.startsWith('neon-genesis-')
+                })
+            }
+        }
+        classpathFiles.addAll(configurations.aspectjTools.files)
+
+        def weaveOutput = { subproject, sourceSet, classDirectory ->
+            if (!classDirectory.exists() || !classDirectory.listFiles()?.any {
+                it.name.endsWith('.class') || it.isDirectory()
+            }) {
+                return
+            }
+
+            def wovenDirectory = project.layout.buildDirectory.dir(
+                    "aspectj-woven/${subproject.name}/${sourceSet.name}").get().asFile
+            project.delete wovenDirectory
+            wovenDirectory.mkdirs()
+
+            project.providers.javaexec {
+                classpath = configurations.aspectjTools
+                mainClass = 'org.aspectj.tools.ajc.Main'
+                args '-inpath', classDirectory.absolutePath,
+                        '-aspectpath', aspectClasses.absolutePath,
+                        '-classpath', classpathFiles.collect { it.absolutePath }
+                        .join(File.pathSeparator),
+                        '-d', wovenDirectory.absolutePath,
+                        '-Xlint:ignore'
+            }.result.get()
+
+            project.delete classDirectory
+            project.copy {
+                from wovenDirectory
+                into classDirectory
+            }
+            project.delete wovenDirectory
+        }
+
+        project(':aspect').sourceSets.main.output.classesDirs.files.each {
+            weaveOutput(project(':aspect'), project(':aspect').sourceSets.main, it)
+        }
+
+        subprojects.findAll { it.name != 'aspect' }.each { subproject ->
+            subproject.sourceSets.each { sourceSet ->
+                sourceSet.output.classesDirs.files.each { classDirectory ->
+                    weaveOutput(subproject, sourceSet, classDirectory)
+                }
+            }
+        }
+    }
+}
+
+subprojects {
+    tasks.withType(Test).configureEach {
+        dependsOn aspectjWeaving
+    }
+
+    project(':tests').tasks.named('prepareEmbeddedContainer').configure {
+        dependsOn aspectjWeaving
+    }
+    tasks.named('jar').configure {
+        dependsOn aspectjWeaving
+    }
+}
