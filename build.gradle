@@ -240,7 +240,7 @@ def aspectjWeaving = tasks.register('weaveAspectJ') {
     def compilationTasks = []
     subprojects.each { subproject ->
         subproject.sourceSets.each { sourceSet ->
-            def compileTask = subproject.tasks.findByName(sourceSet.getCompileTaskName('java'))
+            def compileTask = subproject.tasks.named(sourceSet.getCompileTaskName('java'))
             if (compileTask != null) {
                 compilationTasks.add(compileTask)
             }
