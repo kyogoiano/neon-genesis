@@ -3,7 +3,7 @@
 - **Project Name**: **Neon Genesis** (`neon-genesis`)
 - **Author / Maintainer**: Leandro Cardoso de Andrade (`@kyogoiano` — `leandro.ueg@gmail.com`)
 - **Repository**: `https://github.com/kyogoiano/neon-genesis.git`
-- **Target Stack**: Java 21 LTS · Gradle 8.14+ · AspectJ 1.9.22+ · Jakarta EE 10/11 (Core Profile on Helidon 4 Níma SE + CDI Lite & Web Profile on Open Liberty + EJB Lite + CDI) · OpenJFX 21+
+- **Target Stack**: Java 21–25+ · Gradle 9.8.2+ · AspectJ 1.9.22+ · Jakarta EE 10/11 (Core Profile on Helidon 4 Níma SE + CDI Lite & Web Profile on Open Liberty + EJB Lite + CDI) · OpenJFX 21+
 
 ---
 

@@ -29,7 +29,7 @@ public class DbActions extends AbstractHibernateCommand {
 
 	@Transactional
 	public void deleteAll() throws Exception {
-        getSession().createQuery("delete from HibernateBean").executeUpdate();
+        getSession().createMutationQuery("delete from HibernateBean").executeUpdate();
 	}
 
 	@Transactional
@@ -38,7 +38,7 @@ public class DbActions extends AbstractHibernateCommand {
 		for (int i = 0; i < number; i++) {
 			bean = new HibernateBean();
 			bean.setCode(String.valueOf(i));
-			getSession().save(bean);
+			getSession().persist(bean);
 		}
 	}
 

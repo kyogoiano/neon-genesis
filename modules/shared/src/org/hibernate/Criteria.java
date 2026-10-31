@@ -29,7 +29,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.query.Query;
 
 /**
- * JPA Criteria-backed compatibility bridge for Genesis Criteria commands on Hibernate 6.1+.
+ * JPA Criteria-backed compatibility bridge for Genesis Criteria commands on Hibernate 6/7+.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class Criteria {

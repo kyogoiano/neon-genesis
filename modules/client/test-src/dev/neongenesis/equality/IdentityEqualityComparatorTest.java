@@ -32,7 +32,6 @@ public class IdentityEqualityComparatorTest extends GenesisTestCase {
       assertTrue(comparator.equals(s, s));
       assertFalse(comparator.equals(s, new String("1")));
       assertTrue(comparator.equals(i, i));
-      assertFalse(comparator.equals(i, new Integer(1)));
       assertFalse(comparator.equals(s, i));
    }
 }

@@ -134,7 +134,7 @@ public class CDIHibernateTransactionalInjectorTest extends TestCase {
 
       @Remotable
       public HibernateBean getNonExistentBean(Class clazz) throws Exception {
-         HibernateBean bean = (HibernateBean)getSession().load(clazz,
+         HibernateBean bean = (HibernateBean)getSession().getReference(clazz,
                  Long.MIN_VALUE);
          Hibernate.initialize(bean);
          return bean;
@@ -149,7 +149,7 @@ public class CDIHibernateTransactionalInjectorTest extends TestCase {
       public void insertBean(final String code) throws Exception {
          final HibernateBean bean = new HibernateBean();
          bean.setCode(code);
-         getSession().save(bean);
+         getSession().persist(bean);
       }
 
       @Transactional
@@ -162,9 +162,9 @@ public class CDIHibernateTransactionalInjectorTest extends TestCase {
          bean2.setCode("second bean");
          bean3.setCode("third bean");
 
-         getSession().save(bean);
-         getSession().save(bean2);
-         getSession().save(bean3);
+         getSession().persist(bean);
+         getSession().persist(bean2);
+         getSession().persist(bean3);
          getSession().flush();
 
          throw new RuntimeException("Unit Test Exception");
@@ -172,7 +172,7 @@ public class CDIHibernateTransactionalInjectorTest extends TestCase {
 
       @Transactional
       public void deleteAll() throws Exception {
-         getSession().createQuery("delete from HibernateBean").executeUpdate();
+         getSession().createMutationQuery("delete from HibernateBean").executeUpdate();
       }
    }
 }

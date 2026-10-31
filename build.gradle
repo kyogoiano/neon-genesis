@@ -18,14 +18,16 @@ def osName = System.getProperty('os.name').toLowerCase()
 def javafxPlatform = osName.contains('win') ? 'win' : (osName.contains('mac') ? 'mac' : 'linux')
 def javafxVersion = libs.versions.javafx.get()
 
-allprojects {
-    repositories {
-        mavenCentral()
-    }
+repositories {
+    mavenCentral()
 }
 
 subprojects {
     apply plugin: 'java-library'
+
+    repositories {
+        mavenCentral()
+    }
 
     group = rootProject.group
     version = rootProject.version

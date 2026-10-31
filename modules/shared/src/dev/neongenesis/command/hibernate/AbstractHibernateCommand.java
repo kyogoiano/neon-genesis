@@ -30,7 +30,7 @@ import dev.neongenesis.paging.hibernate.QueryPager;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.query.BindableType;
+import org.hibernate.type.BindableType;
 import org.hibernate.query.Query;
 
 public abstract class AbstractHibernateCommand implements HibernateCommand {
