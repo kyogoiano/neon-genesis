@@ -65,6 +65,32 @@ FXMLView<MyViewController> view = FXMLView.load(
       controllerType -> container.select(controllerType).get());
 ```
 
+For blocking work initiated by a JavaFX view, `JavaFXBinder.runAsync` runs a
+`Callable` on a virtual thread and completes its `CompletableFuture` on the
+JavaFX Application Thread:
+
+```java
+binder.runAsync(() -> service.loadItems())
+      .thenAccept(items -> listView.getItems().setAll(items))
+      .exceptionally(failure -> {
+         showError(failure);
+         return null;
+      });
+```
+
+Bind the `JavaFXBinder` before starting work. The operation runs off the FX
+thread and must not mutate JavaFX controls or assume form-controller,
+transaction, security, or other thread-bound context is propagated. Successful
+and failed task completion is posted to the FX thread, so dependent callbacks
+registered before completion may update controls. As with any
+`CompletableFuture`, callbacks registered after it has already completed run
+on the registering thread. Handle failures through the returned future.
+Cancelling that future interrupts the worker; tasks must cooperate with
+interruption, and cancellation does not roll back side effects. Unbinding
+cancels outstanding tasks and prevents their results from being applied.
+Cancellation callbacks run on the thread that requested cancellation. The API
+does not impose a timeout; configure a timeout appropriate to the operation.
+
 ### Swing (`SwingBinder`)
 `SwingBinder` binds a Swing `Component` / `Container` hierarchy to a `@Form` and `@ViewHandler`:
 - Matches components by `Component#getName()`.

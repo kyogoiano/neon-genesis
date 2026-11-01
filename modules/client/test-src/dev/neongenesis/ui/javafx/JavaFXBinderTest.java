@@ -18,10 +18,15 @@ package dev.neongenesis.ui.javafx;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import dev.neongenesis.GenesisTestCase;
 import dev.neongenesis.mockobjects.MockForm;
 import dev.neongenesis.ui.binding.AbstractBinder;
+import javafx.application.Platform;
 import dev.neongenesis.ui.javafx.components.ComboBoxNodeBinder;
 import dev.neongenesis.ui.javafx.components.LabeledNodeBinder;
 import dev.neongenesis.ui.javafx.components.ListViewNodeBinder;
@@ -45,6 +50,8 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 
 public class JavaFXBinderTest extends GenesisTestCase {
+   private static boolean fxPlatformStarted;
+
    public JavaFXBinderTest() {
       super("JavaFX Binder Unit Test");
    }
@@ -139,6 +146,167 @@ public class JavaFXBinderTest extends GenesisTestCase {
          fail("FXML documents without a controller should be rejected");
       } catch (IOException expected) {
          assertTrue(expected.getMessage().contains("controller"));
+      }
+   }
+
+   public void testAsyncWorkUsesVirtualThreadAndCompletesOnFxThread()
+         throws InterruptedException {
+      ensureFxPlatformStarted();
+
+      JavaFXBinder binder = new JavaFXBinder(new Pane(), new MockForm(),
+            new Object());
+      binder.bind();
+
+      CountDownLatch started = new CountDownLatch(1);
+      CountDownLatch continueTask = new CountDownLatch(1);
+      CountDownLatch completed = new CountDownLatch(1);
+      AtomicReference<Boolean> completedOnFxThread = new AtomicReference<>(false);
+      CompletableFuture<Boolean> task = binder.runAsync(() -> {
+         started.countDown();
+         continueTask.await();
+         return Thread.currentThread().isVirtual();
+      });
+      try {
+         assertTrue("Async task did not start", started.await(10,
+               TimeUnit.SECONDS));
+         task.whenComplete((usedVirtualThread, failure) -> {
+            completedOnFxThread.set(failure == null && usedVirtualThread
+                  && Platform.isFxApplicationThread());
+            completed.countDown();
+         });
+         continueTask.countDown();
+
+         assertTrue("Async task did not complete", completed.await(10,
+               TimeUnit.SECONDS));
+         assertTrue("Task completion must run on the FX thread",
+               completedOnFxThread.get());
+      } finally {
+         continueTask.countDown();
+         binder.unbind();
+      }
+   }
+
+   public void testAsyncFailureIsCompletedOnFxThread()
+         throws InterruptedException {
+      ensureFxPlatformStarted();
+
+      JavaFXBinder binder = new JavaFXBinder(new Pane(), new MockForm(),
+            new Object());
+      binder.bind();
+
+      RuntimeException expectedFailure = new RuntimeException("expected");
+      CountDownLatch started = new CountDownLatch(1);
+      CountDownLatch continueTask = new CountDownLatch(1);
+      CountDownLatch completed = new CountDownLatch(1);
+      AtomicReference<Throwable> actualFailure = new AtomicReference<>();
+      AtomicReference<Boolean> completedOnFxThread = new AtomicReference<>(false);
+      binder.runAsync(() -> {
+         started.countDown();
+         continueTask.await();
+         throw expectedFailure;
+      }).whenComplete((result, failure) -> {
+         actualFailure.set(failure);
+         completedOnFxThread.set(Platform.isFxApplicationThread());
+         completed.countDown();
+      });
+      try {
+         assertTrue("Async task did not start", started.await(10,
+               TimeUnit.SECONDS));
+         continueTask.countDown();
+
+         assertTrue("Failed task did not complete", completed.await(10,
+               TimeUnit.SECONDS));
+         assertSame(expectedFailure, actualFailure.get());
+         assertTrue("Failure completion must run on the FX thread",
+               completedOnFxThread.get());
+      } finally {
+         continueTask.countDown();
+         binder.unbind();
+      }
+   }
+
+   public void testUnbindCancelsAsyncWork() throws InterruptedException {
+      ensureFxPlatformStarted();
+
+      JavaFXBinder binder = new JavaFXBinder(new Pane(), new MockForm(),
+            new Object());
+      binder.bind();
+
+      CountDownLatch started = new CountDownLatch(1);
+      CountDownLatch interrupted = new CountDownLatch(1);
+      CompletableFuture<Void> task = binder.runAsync(() -> {
+         started.countDown();
+         try {
+            new CountDownLatch(1).await();
+         } catch (InterruptedException expected) {
+            interrupted.countDown();
+         }
+         return null;
+      });
+
+      assertTrue("Async task did not start", started.await(10,
+            TimeUnit.SECONDS));
+      binder.unbind();
+
+      assertTrue("Unbinding must cancel outstanding task", task.isCancelled());
+      assertTrue("Unbinding must interrupt the worker",
+            interrupted.await(10, TimeUnit.SECONDS));
+   }
+
+   public void testCancellingFutureInterruptsAsyncWork()
+         throws InterruptedException {
+      ensureFxPlatformStarted();
+
+      JavaFXBinder binder = new JavaFXBinder(new Pane(), new MockForm(),
+            new Object());
+      binder.bind();
+
+      CountDownLatch started = new CountDownLatch(1);
+      CountDownLatch interrupted = new CountDownLatch(1);
+      CompletableFuture<Void> task = binder.runAsync(() -> {
+         started.countDown();
+         try {
+            new CountDownLatch(1).await();
+         } catch (InterruptedException expected) {
+            interrupted.countDown();
+         }
+         return null;
+      });
+
+      try {
+         assertTrue("Async task did not start", started.await(10,
+               TimeUnit.SECONDS));
+         assertTrue("Cancelling the future must succeed", task.cancel(true));
+         assertTrue("Future cancellation must interrupt the worker",
+               interrupted.await(10, TimeUnit.SECONDS));
+      } finally {
+         binder.unbind();
+      }
+   }
+
+   private static void ensureFxPlatformStarted() throws InterruptedException {
+      synchronized (JavaFXBinderTest.class) {
+         if (fxPlatformStarted) {
+            return;
+         }
+
+         CountDownLatch started = new CountDownLatch(1);
+         try {
+            Platform.startup(() -> {
+               Platform.setImplicitExit(false);
+               started.countDown();
+            });
+         } catch (IllegalStateException alreadyStarted) {
+            Platform.runLater(() -> {
+               Platform.setImplicitExit(false);
+               started.countDown();
+            });
+         }
+
+         if (!started.await(10, TimeUnit.SECONDS)) {
+            throw new AssertionError("JavaFX platform did not start");
+         }
+         fxPlatformStarted = true;
       }
    }
 

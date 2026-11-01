@@ -168,24 +168,38 @@ using virtual threads alone makes an API asynchronous.
 
 **Initial design boundaries**
 
-- Start with an asynchronous remote HTTP command client; keep CDI-local and
-  EJB/container execution synchronous until their transaction and request
-  context semantics can be preserved.
-- Return `CompletionStage` from new async entry points, preserve existing
-  synchronous methods, and propagate transport/command failures through
-  exceptional completion.
+- Start with an opt-in JavaFX task API for blocking UI-initiated work; keep
+  existing synchronous binding/action behavior unchanged. Remote HTTP command
+  calls remain a candidate for a subsequent async entry point.
+- Run JavaFX task operations on virtual threads and deliver successful and
+  failed task completion on the JavaFX Application Thread. Cancellation
+  interrupts the worker cooperatively, and unbinding cancels outstanding work.
+- Keep CDI-local and EJB/container execution synchronous until their
+  transaction and request-context semantics can be preserved.
 - Define cancellation and timeout behavior at the HTTP request boundary;
   cancelling a client request does not imply that already-running server work
   was rolled back.
 - Marshal JavaFX updates back to the JavaFX Application Thread. Do not imply
   CDI, transaction, or security context propagation across executor boundaries.
 
+**Initial implementation:** `JavaFXBinder.runAsync(Callable<T>)` executes
+blocking work on a virtual thread and completes a `CompletableFuture` on the FX
+thread. Cancelling the future interrupts the worker, and binder unbinding
+cancels active tasks. Failures are delivered through exceptional completion;
+thread-bound contexts are not propagated. It applies no default timeout;
+callers configure timeouts according to the operation being performed.
+
 **Acceptance criteria**
 
-- Each selected path has a written contract for completion, cancellation,
-  timeout, errors, and execution context.
+- [x] The JavaFX task API has a documented contract for completion,
+  cancellation, errors, and execution context.
+- [x] Tests cover virtual-thread execution, FX-thread completion, failure
+  propagation, and cancellation on unbind.
+- Each additional async path has a written contract for completion,
+  cancellation, timeout, errors, and execution context.
 - Existing synchronous callers retain their behavior.
-- Tests cover completion, failure, cancellation, and thread/context boundaries.
+- Tests cover completion, failure, cancellation, and thread/context boundaries
+  for each additional async path.
 
 ### 6. Adopt Jakarta EE 12 APIs, starting with CDI 5.0 Lite
 
