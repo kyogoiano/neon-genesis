@@ -36,7 +36,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 
 @Aspect
 public class CriteriaCommandExecutionAspect {
-   private ThreadLocal threadLocal = new InheritableThreadLocal();
+   private final ThreadLocal<Method> criteriaMethod = new ThreadLocal<Method>();
 
    private boolean preventStackOverflow() {
       return Boolean.getBoolean("genesis.aspect.preventCriteriaStackOverflow");
@@ -53,11 +53,9 @@ public class CriteriaCommandExecutionAspect {
       boolean preventStackOverflow = preventStackOverflow();
 
       if (preventStackOverflow) {
-         Method m = (Method)threadLocal.get();
-         if (m != null && m.equals(method)) {
-            Object value = joinPoint.proceed();
-            threadLocal.set(null);
-            return value;
+         Method nestedMethod = criteriaMethod.get();
+         if (method.equals(nestedMethod)) {
+            return joinPoint.proceed();
          }
       }
 
@@ -77,7 +75,7 @@ public class CriteriaCommandExecutionAspect {
       final CriteriaAnnotationParser parser = new CriteriaAnnotationParser(annon);
       
       if (preventStackOverflow) {
-         threadLocal.set(method);
+         criteriaMethod.set(method);
       }
 
       try {
@@ -87,7 +85,7 @@ public class CriteriaCommandExecutionAspect {
                .execute();
       } finally {
          if (preventStackOverflow) {
-            threadLocal.set(null);
+            criteriaMethod.remove();
          }
       }
    }

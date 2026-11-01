@@ -453,7 +453,7 @@ public class JListComponentBinderTest extends GenesisTestCase {
       Object[] values = new Object[] { model.getElementAt(2),
             model.getElementAt(4) };
       boundField.setValue(values);
-      assertTrue(Arrays.equals(values, list.getSelectedValues()));
+      assertEquals(Arrays.asList(values), list.getSelectedValuesList());
       assertTrue(Arrays.equals(new int[] { 2, 4 }, list.getSelectedIndices()));
 
       values = new Object[] { model.getElementAt(0) };
@@ -482,7 +482,7 @@ public class JListComponentBinderTest extends GenesisTestCase {
       Object[] values = new Object[] { model.getElementAt(2),
             model.getElementAt(4) };
       boundField.setValue(values);
-      assertTrue(Arrays.equals(values, list.getSelectedValues()));
+      assertEquals(Arrays.asList(values), list.getSelectedValuesList());
       assertTrue(Arrays.equals(new int[] { 2, 4 }, list.getSelectedIndices()));
 
       values = new Object[] { model.getElementAt(1) };

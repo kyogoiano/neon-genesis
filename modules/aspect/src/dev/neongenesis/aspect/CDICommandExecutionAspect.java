@@ -46,7 +46,6 @@ public class CDICommandExecutionAspect {
 
    private volatile String cachedNimaUrl;
    private volatile HelidonCommandClient nimaClient;
-   private final ThreadLocal<Boolean> executingCommand = new ThreadLocal<Boolean>();
 
    public static boolean isCdiExecutionEnabled() {
       if (LocalEJBCommandExecutionAspect.localEjbEnabled()) {
@@ -72,18 +71,14 @@ public class CDICommandExecutionAspect {
       }
    }
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       if (!isCdiExecutionEnabled()) {
          return joinPoint.proceed();
       }
 
-      if (Boolean.TRUE.equals(executingCommand.get())
-            || CommandExecutionGuard.isExecuting()) {
+      if (CommandExecutionGuard.isExecuting()) {
          return joinPoint.proceed();
       }
 
@@ -106,7 +101,7 @@ public class CDICommandExecutionAspect {
          classNames[i] = parameterTypes[i].getName();
       }
 
-      executingCommand.set(Boolean.TRUE);
+      CommandExecutionGuard.enter();
       try {
          boolean useRemoteNima = shouldUseRemoteNima();
          CommandExecutor executor = getCommandExecutor(useRemoteNima);
@@ -124,7 +119,7 @@ public class CDICommandExecutionAspect {
             throw e.getTargetException();
          }
       } finally {
-         executingCommand.remove();
+         CommandExecutionGuard.exit();
       }
    }
 

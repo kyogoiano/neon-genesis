@@ -151,17 +151,6 @@ public final class ValidationUtils {
       return messages;
    }
 
-   @Deprecated
-   public boolean isValid(dev.neongenesis.ui.Form f) throws ValidatorException {
-      try {
-         return f.validate(getPropertiesMap(f)).isEmpty();
-      } catch (ValidatorException ve) {
-         throw ve;
-      } catch (Exception e) {
-         throw new RuntimeException(e);
-      }
-   }
-
    public boolean isValid(Object form) throws ValidatorException {
       try {
          return validate(form, form.getClass().getName()).isEmpty();

@@ -93,21 +93,23 @@ public class EJBHibernateTransactionalInjectorTest extends TestCase {
 
       @Remotable
       public HibernateBean getBean(final String code) throws Exception {
-         final Query query = getSession().createQuery(
-               "from HibernateBean bean where bean.code = :code");
+         final Query<HibernateBean> query = getSession().createQuery(
+               "from HibernateBean bean where bean.code = :code",
+               HibernateBean.class);
          query.setParameter("code", code);
          return (HibernateBean) query.uniqueResult();
       }
 
       @Remotable
       public List getBeans() throws Exception {
-         final Query query = getSession().createQuery("from HibernateBean");
+         final Query<HibernateBean> query = getSession().createQuery(
+               "from HibernateBean", HibernateBean.class);
          return query.list();
       }
 
       @Remotable
       public HibernateBean getNonExistentBean(Class clazz) throws Exception {
-         HibernateBean bean = (HibernateBean)getSession().load(clazz,
+         HibernateBean bean = (HibernateBean)getSession().getReference(clazz,
                  Long.MIN_VALUE);
          Hibernate.initialize(bean);
          return bean;
@@ -122,7 +124,7 @@ public class EJBHibernateTransactionalInjectorTest extends TestCase {
       public void insertBean(final String code) throws Exception {
          final HibernateBean bean = new HibernateBean();
          bean.setCode(code);
-         getSession().save(bean);
+         getSession().persist(bean);
       }
       
       @Transactional
@@ -135,9 +137,9 @@ public class EJBHibernateTransactionalInjectorTest extends TestCase {
          bean2.setCode("second bean");
          bean3.setCode("third bean");
 
-         getSession().save(bean);
-         getSession().save(bean2);
-         getSession().save(bean3);
+         getSession().persist(bean);
+         getSession().persist(bean2);
+         getSession().persist(bean3);
          getSession().flush();
 
          throw new RuntimeException("Unit Test Exception");
@@ -145,7 +147,7 @@ public class EJBHibernateTransactionalInjectorTest extends TestCase {
 
       @Transactional
       public void deleteAll() throws Exception {
-          getSession().createQuery("delete from HibernateBean").executeUpdate();
+          getSession().createMutationQuery("delete from HibernateBean").executeUpdate();
       }
    }
 }

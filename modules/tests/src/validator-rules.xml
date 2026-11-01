@@ -44,11 +44,6 @@
                 method="validateRequired" 
                 methodParams="java.lang.Object,org.apache.commons.validator.Field" 
                 msg="errors.required"/>
-        <validator name="requiredif" 
-                classname="dev.neongenesis.ui.BasicValidator" 
-                method="validateRequiredIf" 
-                methodParams="java.lang.Object,org.apache.commons.validator.Field,org.apache.commons.validator.Validator" 
-                msg="errors.requiredif"/>
         <validator name="mask" 
                 classname="dev.neongenesis.ui.BasicValidator" 
                 method="validateMask" 
@@ -99,11 +94,11 @@
                 method="validateBigDecimalRange" 
                 methodParams="java.lang.Object,org.apache.commons.validator.Field" 
                 msg="errors.bigDecimalRange"/>	
-        <validator name="jxpath" 
+        <validator name="script"
                 classname="dev.neongenesis.ui.BasicValidator" 
-                method="validateJXPath" 
+                method="validateScript"
                 methodParams="java.lang.Object,org.apache.commons.validator.Field" 
-                msg="errors.jxpath"/>			
+                msg="errors.script"/>
         <validator name="url" 
                 classname="dev.neongenesis.ui.BasicValidator" 
                 method="validateUrl" 

@@ -44,11 +44,6 @@
                 method="validateRequired" 
                 methodParams="java.lang.Object,org.apache.commons.validator.Field" 
                 msg="errors.required"/>
-        <validator name="requiredif" 
-                classname="dev.neongenesis.ui.BasicValidator" 
-                method="validateRequiredIf" 
-                methodParams="java.lang.Object,org.apache.commons.validator.Field,org.apache.commons.validator.Validator" 
-                msg="errors.requiredif"/>
         <validator name="mask" 
                 classname="dev.neongenesis.ui.BasicValidator" 
                 method="validateMask" 
@@ -99,12 +94,6 @@
                 method="validateBigDecimalRange" 
                 methodParams="java.lang.Object,org.apache.commons.validator.Field" 
                 msg="errors.bigDecimalRange"/>
-        <!-- jxpath validator is deprecated. Use script validator instead -->
-        <validator name="jxpath" 
-                classname="dev.neongenesis.ui.BasicValidator" 
-                method="validateJXPath" 
-                methodParams="java.lang.Object,org.apache.commons.validator.Field" 
-                msg="errors.jxpath"/>
         <validator name="script" 
                 classname="dev.neongenesis.ui.BasicValidator" 
                 method="validateScript" 

@@ -1,14 +1,14 @@
 # Neon Genesis
 
-**Neon Genesis** (`dev.neongenesis`) is a declarative Java UI binding and transactional command execution framework for **Java 21+**, **OpenJFX / Swing**, and **Jakarta EE 10/11**.
+**Neon Genesis** (`dev.neongenesis`) is a declarative Java UI binding and transactional command execution framework for **Java 21+**, **OpenJFX / Swing**, and **Jakarta EE 11**.
 
 Originally forked from the Summa Genesis framework, **Neon Genesis** modernizes the entire stack around:
-- **Java 21 LTS** & **AspectJ 1.9.22+** post-compile weaving
+- **Java 21–25+** & **AspectJ 1.9.25+** post-compile weaving
 - **OpenJFX 21+** (`JavaFXBinder`) and **Swing** (`SwingBinder`) rich-client UI binding
-- **Dual Jakarta EE Server Profiles**:
-  - **Core Profile**: **Helidon 4 Níma SE** (virtual threads) + **CDI 4.0/4.1 Lite** (Weld SE)
-  - **Web Profile**: **Open Liberty** + **EJB Lite 4.0** + **CDI 4.0/4.1**
-- **Hibernate ORM** persistence, declarative `@Transactional` / `@Remotable` commands, `@Criteria` dynamic queries, and paging
+- **Dual Jakarta EE 11 Server Profiles**:
+  - **Core Profile**: **Helidon 4 Níma SE** (virtual threads) + **CDI 4.1 Lite** (Weld SE 6)
+  - **Web Profile**: **Open Liberty 26+** (`webProfile-11.0`) + **EJB Lite 4.0** + **CDI 4.1**
+- **Hibernate ORM 7.4.x** (`jakarta.persistence` 3.2), declarative `@Transactional` / `@Remotable` commands, `@Criteria` dynamic queries, and paging
 
 ---
 
@@ -50,9 +50,9 @@ flowchart LR
 | Module | Artifact | Description |
 | :--- | :--- | :--- |
 | `:annotation` | `neon-genesis-annotation` | Declarative annotations (`@Form`, `@ViewHandler`, `@Action`, `@DataProvider`, `@EnabledWhen`, `@VisibleWhen`, `@Transactional`, `@Remotable`, `@Criteria`, etc.) |
-| `:shared` | `neon-genesis-shared` | Shared command contracts (`Command`, `Query`, `Transaction`, `TransactionalInjector`), Hibernate integration (`AbstractHibernateCommand`, `QueryPager`), and utilities |
+| `:shared` | `neon-genesis-shared` | Shared command execution contracts (`TransactionalInjector`), Hibernate integration (`AbstractHibernateCommand`, `QueryPager`), and utilities |
 | `:client` | `neon-genesis-client` | Client metadata, `FormController`, scripting engines (`EL`, `javax.script` Rhino/BeanShell, `JXPath`), `SwingBinder`, and `JavaFXBinder` |
-| `:server` | `neon-genesis-server` | Server executors (`CommandExecutorCDI`, `CommandExecutorEJB`, `CommandExecutorLocal`), `CDIHibernateTransactionalInjector`, and Helidon 4 Níma `HelidonCommandServer`/`HelidonCommandClient` |
+| `:server` | `neon-genesis-server` | Server executors (`CommandExecutorCDI`, `CommandExecutorEJB`, `CommandExecutorLocal`), `CDIHibernateTransactionalInjector`, Helidon 4 Níma `HelidonCommandServer`/`HelidonCommandClient`, and optional Jakarta JSON-B/JSON-P APIs |
 | `:aspect` | `neon-genesis-aspect` | AspectJ aspects for metadata introduction, `FormController` lifecycle, `@Criteria` query resolution, and CDI/EJB command execution |
 | `:tests` | — | Core Profile (Helidon 4 Níma SE + CDI Lite) and Web Profile (EJB Lite 4.0 + CDI) integration test suites |
 
@@ -60,7 +60,8 @@ flowchart LR
 
 ## Building & Running Tests
 
-Build with **JDK 21** or newer:
+The project targets Java 21 bytecode. The full build and both integration
+profiles are verified on **JDK 21 and JDK 25**:
 
 ```bash
 # Compile, weave AspectJ aspects, and run all checks

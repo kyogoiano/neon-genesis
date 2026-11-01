@@ -42,7 +42,7 @@ public class BundleTest extends TestCase {
             "message_0", "genesis"));
 
 
-      Locale pt_BR = new Locale("pt", "BR");
+      Locale pt_BR = Locale.forLanguageTag("pt-BR");
       Locale.setDefault(pt_BR);
       assertEquals("Teste", Bundle.getMessage(BundleTest.class, "test"));
       assertEquals("Default", Bundle.getMessage(BundleTest.class, "default"));

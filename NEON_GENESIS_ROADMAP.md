@@ -1,76 +1,242 @@
-# Neon Genesis — Modernization & Architecture Roadmap
+# Neon Genesis Roadmap
 
-- **Project Name**: **Neon Genesis** (`neon-genesis`)
-- **Author / Maintainer**: Leandro Cardoso de Andrade (`@kyogoiano` — `leandro.ueg@gmail.com`)
-- **Repository**: `https://github.com/kyogoiano/neon-genesis.git`
-- **Target Stack**: Java 21 LTS · Gradle 8.14+ · AspectJ 1.9.22+ · Jakarta EE 10/11 (Core Profile on Helidon 4 Níma SE + CDI Lite & Web Profile on Open Liberty + EJB Lite + CDI) · OpenJFX 21+
+This roadmap sets the direction for the next modernization cycle. It prioritizes
+concurrency, JDK compatibility, and modernization of the framework's public
+surface before Jakarta EE 12. Jakarta EE 12 is intentionally the final
+compatibility migration. This is a sequence of goals, not a release calendar;
+versions and implementation choices should be confirmed against released
+specifications and compatible runtimes before adoption.
 
----
+## Guiding principles
 
-## Roadmap Phases
+- Preserve the existing command, binding, and deployment behavior unless a
+  migration explicitly changes it.
+- Keep compatibility boundaries clear across supported JDKs, Jakarta runtimes,
+  and UI toolkits.
+- Prefer standard Jakarta APIs over project-specific replacements where they
+  meet the use case.
+- Make asynchronous behavior explicit; do not silently change synchronous APIs
+  or block UI and request threads.
+- Keep source and binary compatibility in mind when replacing deprecated APIs.
 
-```mermaid
-flowchart TD
-    A["Phase 1 (Completed): JDK 21 + Jakarta EE 10\nHelidon 4 Níma SE (CDI Lite) & Open Liberty (EJB Lite + CDI)"] --> B["Phase 2: Modern Documentation\nCreate new Markdown docs & architecture guides,\nthen remove legacy docs/ & xdocs/"]
-    B --> C["Phase 3: Prune Legacy Stack\nRemove Thinlet, XDoclet, Ant/Maven 1, AspectWerkz,\nBSF bundles, Java 1.4 bridges & checked-in JARs"]
-    C --> D["Phase 4: Rename & Re-license to Neon Genesis\nUpdate Gradle modules, coordinates, license headers,\nand configure git remote origin"]
-    D --> E["Phase 5: OpenJFX UI Support\nIntroduce JavaFXBinder, Property/Observable adapters,\nand FXML ViewHandler integration"]
-    E --> F["Phase 6: Jakarta EE 11 & Hibernate 7\nUpgrade to CDI 4.1, Persistence 3.2, Servlet 6.1,\nEL 6.0, Hibernate 7.x, and Open Liberty EE 11"]
-```
+## Priorities
 
----
+### 0. Make virtual threads the default for internal execution
 
-## 1. Documentation Modernization (Create New Docs Before Deleting Legacy Docs)
+Use virtual threads for framework-managed blocking work, including command
+dispatch and relevant server-side execution paths. Keep executor ownership and
+shutdown behavior explicit, and avoid changing application-provided executors.
+Virtual threads must not be used to bypass JavaFX or Swing thread-confinement
+rules.
 
-### New Markdown Documentation Suite
-1. `README.md` — Project overview, architecture diagram, module guide, and Gradle build/test instructions.
-2. `docs/architecture.md` — Core MVVM/MVC metadata (`@Form`, `@ViewHandler`, `FormController`) and AspectJ post-compile weaving architecture.
-3. `docs/annotations-and-binding.md` — Reference for `@Form`, `@ViewHandler`, `@Action`, `@DataProvider`, `@Condition`, `@EnabledWhen`, `@VisibleWhen`, `@ClearOn`, `@CallWhen`, `@ValidateBefore`, and scripting engines (Jakarta EL, JSR-223, JXPath).
-4. `docs/server-profiles.md` — Dual Jakarta EE profile guide:
-   - **Core Profile**: Helidon 4 Níma SE + CDI Lite (`CommandExecutorCDI`, `CDIHibernateTransactionalInjector`, `HelidonCommandServer`/`HelidonCommandClient`).
-   - **Web Profile**: Open Liberty + EJB Lite 4.0 + CDI (`CommandExecutorEJB`, `CommandExecutorLocal`).
-5. `docs/persistence-and-criteria.md` — Hibernate 6/7 integration, `@Transactional`, `@Remotable`, `@Criteria` dynamic queries, and paging (`QueryPager`).
+**Initial implementation:** Framework-owned bootstrap work in `StartupHelper`
+now uses named virtual threads for the no-op command warm-up and validator-rule
+loading. The timeout test harness also uses virtual threads for its worker and
+disposer, and asserts that timeout-wrapped work runs on a virtual thread. CDI
+command calls remain synchronous, and EJB execution remains container-managed;
+changing those paths requires separate transaction and context-propagation
+validation. No direct platform-thread creation sites remain in framework code;
+threads owned by CDI/EJB containers remain under container control.
+CDI and EJB dispatch reuse the shared command-execution guard instead of
+maintaining duplicate thread-local flags. Criteria and local-EJB reentrancy
+markers use non-inheritable, typed thread-local state, and the local execution
+test aspect uses typed thread-local state instead of thread-keyed weak maps.
 
-### Legacy Documentation to Remove Afterwards
-- `docs/en/**`, `docs/pt-BR/**`, `docs/cobertura/**`, `docs/eclipse/**`, `docs/images/**`, `docs/tags/**`, `docs/*.html`, `docs/*.gif`, `docs/*.bmp`
-- `genesis/xdocs/**` and `modules/*/xdocs/**`
-- `genesis/BUILD-INSTRUCTIONS.txt` (consolidated into `README.md` and `docs/`)
+**Acceptance criteria**
 
----
+- Framework-owned blocking tasks use virtual-thread-backed execution by
+  default on supported JDKs.
+- Execution mode and lifecycle are consistent across local, CDI, EJB, and
+  remote command paths where the runtime permits framework control.
+- Tests cover concurrent command execution, error propagation, cancellation,
+  and orderly shutdown.
+- Any path that cannot use virtual threads documents why and retains a safe
+  fallback.
 
-## 2. Remove Thinlet & Legacy Features
+### 1. Certify support for JDK 25
 
-- **Thinlet UI Support**:
-  - `modules/client/src/net/java/dev/genesis/ui/thinlet/**`
-  - `modules/aspect/src/net/java/dev/genesis/aspect/ThinletMetadataFactoryAspect.java`
-  - `modules/aspect/src/net/java/dev/genesis/aspect/WaitCursorAspect.java`
-  - `modules/client/test-src/net/java/dev/genesis/ui/thinlet/**`
-  - `modules/tests/src/net/java/dev/genesis/tests/thinlet/**`
-  - `net.sourceforge.thinlet:thinlet` dependency and Thinlet JAR AspectJ weaving in `genesis/build.gradle`.
-- **Legacy Code Generation & Build Files**:
-  - `xdoclet/**`, `xdoclet-genesis-modules/**`, `ant-tasks/**`
-  - `genesis/build.xml`, `genesis/master_build.xml`, `genesis/desktop_build.xml`, `genesis/web_build.xml`, `genesis/build_dist.xml`, `genesis/build.properties*`, `genesis/project.xml`, `genesis/maven.xml`, `genesis/project.properties`, `genesis/clover.license`
-  - `samples/**` (legacy Ant/WebStart sample projects)
-  - `genesis/lib/**` (checked-in legacy 2004–2008 JARs; internalize or replace `reusable-components`)
-- **Obsolete Modules & Bridges**:
-  - `modules/container/**` and `modules/i18n/**`
-  - `modules/client/src/net/java/dev/genesis/script/bsf/**`
-  - `modules/client/src/net/java/dev/genesis/script/javaxscript/bridge/**` (replace JDK 1.4 reflection bridge with direct `javax.script.*` from `java.scripting`)
+Establish JDK 25 as a tested runtime and build target while preserving the
+existing minimum supported JDK. Validate the build toolchain, AspectJ weaving,
+JavaFX platform dependencies, Jakarta integrations, and test suites; update
+documentation only after the supported matrix is verified.
 
----
+**Status:** Verified on JDK 21 and JDK 25. CI now runs the full build, including
+Core and Web Profile integration tests, on both versions.
 
-## 3. Rename to `neon-genesis`, Re-license & Configure Git Remote
+**Acceptance criteria**
 
-- Rename Gradle root project to `neon-genesis` and artifacts to `neon-genesis-*`.
-- Update license headers and `LICENSE.txt` with fork author metadata (**Leandro Cardoso de Andrade — `@kyogoiano` `<leandro.ueg@gmail.com>`**).
-- Point Git remote `origin` to `https://github.com/kyogoiano/neon-genesis.git`.
+- [x] CI builds and runs the full suite on JDK 25 and the existing minimum
+  supported JDK.
+- [x] Dependency and plugin compatibility issues are resolved for the verified
+  JDK range.
+- [x] The README states the verified JDK support range.
 
----
+### 2. Replace deprecated APIs with modern alternatives
 
-## 4. OpenJFX Support & Jakarta EE 11 Migration
+Inventory deprecated public APIs and their usages, identify supported
+replacements, then migrate internal callers before considering removal. Current
+examples to assess include the legacy command/query/transaction abstractions,
+deprecated Hibernate command types, older validation and UI utilities, and
+deprecated binder APIs.
 
-- **OpenJFX 21+ (`ui.javafx`)**:
-  - Add `org.openjfx:javafx-controls` and `org.openjfx:javafx-fxml`.
-  - Implement `JavaFXBinder` (`AbstractBinder` implementation for JavaFX `Node`, `TextInputControl`, `ComboBox`, `ListView`, `TableView`, `CheckBox`, `ToggleButton`, `ButtonBase`, and FXML controllers).
-- **Jakarta EE 11 & Hibernate 7.x**:
-  - Upgrade to Jakarta CDI 4.1 (Weld 6), Jakarta Persistence 3.2 (Hibernate 7.0.x), Jakarta Servlet 6.1, Jakarta EL 6.0 (Expressly 6), and Open Liberty Web Profile 11.
+This modernization accepts the public API compatibility break: document
+replacements, migrate internal callers, and remove obsolete declarations once
+their replacement behavior is covered. Do not remove an API solely because it
+is annotated `@Deprecated`; first confirm its replacement covers the same
+behavior.
+
+**Status:** All deprecated public API declarations have been removed, and
+internal test usage now exercises the annotation-based APIs. Deprecated
+reflection, Hibernate query creation, BeanUtils array conversion, and Swing
+selection APIs have also been replaced in internal callers. This is a
+source/binary compatibility break; migration guidance is in
+`docs/annotations-and-binding.md`.
+
+| Deprecated API | Modern direction | Status |
+| --- | --- | --- |
+| `Command`, `Query`, `Transaction`, `NoopQuery` | Plain serializable command objects with method-level `@Remotable` / `@Transactional` | Removed; internal test usages migrated |
+| `AbstractHibernateQuery`, `AbstractHibernateTransaction`, and marker interfaces | `AbstractHibernateCommand` plus method-level annotations | Removed; internal test usages migrated |
+| `ValidationUtils.isValid(Form)` and `ui.Form` | `ValidationUtils.isValid(Object)` and regular POJOs with `@Form` | Removed |
+| `BasicValidator.validateRequiredIf` | `BasicValidator.validateScript` | Removed; validator examples use script-based validation |
+| `BasicValidator.validateJXPath` | `BasicValidator.validateScript` | Removed; validator rules use script-based validation |
+| `SwingBinder.registerComponentBinder` | `SwingBinder.registerWidgetBinder` | Removed |
+| `UIUtils.asIdentifier` / `asClassName` | Toolkit-native component IDs/names | Removed; no internal callers |
+
+**Acceptance criteria**
+
+- [x] Every deprecated public API has a documented replacement.
+- [x] Command integration tests use the modern command/annotation APIs.
+- [x] The intentional source/binary compatibility break and migration guidance
+  are documented.
+
+### 3. Add Jakarta JSON Binding and JSON Processing
+
+Add optional integrations for Jakarta JSON Binding (JSON-B) and Jakarta JSON
+Processing (JSON-P). Use JSON-B for object binding and JSON-P for standard JSON
+model/stream processing where those capabilities are needed, while keeping
+transport and serialization choices replaceable.
+
+Use JSON-B 3.0 and JSON-P 2.1, compatible with the current Jakarta EE 11
+baseline. Reassess these APIs and providers as part of the final Jakarta EE 12
+migration. Keep the APIs modular so projects that do not need JSON support do
+not acquire unnecessary runtime dependencies.
+
+**Initial implementation:** The server module now exposes JSON-B 3.0 and JSON-P
+2.1 APIs as compile-time-only APIs. No provider is forced on applications, and
+the current command transport remains unchanged. Core integration tests use
+Yasson and Parsson to exercise serialization, deserialization, JSON processing,
+and malformed input.
+
+**Acceptance criteria**
+
+- [x] JSON-B and JSON-P APIs are available through optional dependencies.
+- [x] Tests cover serialization, deserialization, JSON processing, and
+  malformed input behavior.
+- Any use in remote command transport has documented compatibility and does
+  not silently change the existing wire format.
+
+### 4. Make FXML integration a first-class JavaFX workflow
+
+The project already has JavaFX binding and an FXML dependency. Build on that
+foundation with explicit FXML loading and controller lifecycle integration,
+clear binding setup/teardown, and documented dependency-injection or controller
+construction boundaries. Keep JavaFX UI updates on the JavaFX Application
+Thread.
+
+**Status:** `FXMLView` now loads an FXML document, resolves its controller,
+binds it to the supplied form, and provides an `AutoCloseable` lifecycle for
+unbinding. A controller factory supports application-managed controllers.
+
+**Acceptance criteria**
+
+- [x] An FXML-backed view can be loaded and bound with a documented, minimal setup.
+- [x] Controller factory and binder lifecycle are tested.
+- [x] Integration works with the existing `JavaFXBinder` without regressing
+  programmatically constructed views.
+
+### 5. Plan asynchronous processing for key paths
+
+Identify where asynchronous APIs provide a concrete benefit before
+implementation. Candidate areas include remote command calls, long-running
+command execution, and UI-facing data-provider operations. Define cancellation,
+timeouts, error propagation, ordering, and transaction boundaries for each
+candidate.
+
+Introduce async entry points alongside existing synchronous APIs where
+practical. Do not move blocking work onto UI threads, and do not assume that
+using virtual threads alone makes an API asynchronous.
+
+**Initial design boundaries**
+
+- Start with an opt-in JavaFX task API for blocking UI-initiated work; keep
+  existing synchronous binding/action behavior unchanged. Remote HTTP command
+  calls remain a candidate for a subsequent async entry point.
+- Run JavaFX task operations on virtual threads and deliver successful and
+  failed task completion on the JavaFX Application Thread. Cancellation
+  interrupts the worker cooperatively, and unbinding cancels outstanding work.
+- Keep CDI-local and EJB/container execution synchronous until their
+  transaction and request-context semantics can be preserved.
+- Define cancellation and timeout behavior at the HTTP request boundary;
+  cancelling a client request does not imply that already-running server work
+  was rolled back.
+- Marshal JavaFX updates back to the JavaFX Application Thread. Do not imply
+  CDI, transaction, or security context propagation across executor boundaries.
+
+**Initial implementation:** `JavaFXBinder.runAsync(Callable<T>)` executes
+blocking work on a virtual thread and completes a `CompletableFuture` on the FX
+thread. Cancelling the future interrupts the worker, and binder unbinding
+cancels active tasks. Failures are delivered through exceptional completion;
+thread-bound contexts are not propagated. It applies no default timeout;
+callers configure timeouts according to the operation being performed.
+`runAsyncBatch` adds bounded parallel execution with input-ordered results,
+configurable maximum concurrency, fail-fast error propagation, and
+cancellation of in-flight siblings.
+
+**Acceptance criteria**
+
+- [x] The JavaFX task API has a documented contract for completion,
+  cancellation, errors, and execution context.
+- [x] Batched tasks run in parallel up to a configurable limit, preserve input
+  result order, and cancel in-flight siblings on failure or unbind.
+- [x] Tests cover virtual-thread execution, FX-thread completion, failure
+  propagation, concurrency limits, batch ordering, and cancellation.
+- Each additional async path has a written contract for completion,
+  cancellation, timeout, errors, and execution context.
+- Existing synchronous callers retain their behavior.
+- Tests cover completion, failure, cancellation, and thread/context boundaries
+  for each additional async path.
+
+### 6. Adopt Jakarta EE 12 APIs, starting with CDI 5.0 Lite
+
+As the final platform migration, move the current Jakarta EE 11 integrations
+forward to Jakarta EE 12. Begin with CDI 5.0 Lite and update the Core and Web
+profiles only when compatible implementations and runtimes are available.
+Review related specifications and provider versions together rather than
+upgrading individual artifacts without a tested compatibility set. Revalidate
+the JSON APIs and providers from Priority 3 as part of this migration.
+
+**Preparation:** Hibernate ORM 7.4.14.Final is now the tested persistence
+baseline with Jakarta Persistence 3.2. This ORM upgrade is independent of the
+CDI API level; CDI 5.0 Lite remains deferred to this final migration.
+
+**Acceptance criteria**
+
+- CDI 5.0 Lite integration works in the supported standalone and application
+  server profiles.
+- Jakarta EE API, implementation, and runtime versions are aligned and tested
+  as a documented matrix.
+- Existing CDI and EJB command execution and transactional behavior remains
+  covered by integration tests.
+- Migration notes describe runtime configuration and any incompatible changes.
+
+## Delivery approach
+
+1. Establish the virtual-thread default and JDK 25 compatibility baseline.
+2. Migrate deprecated API callers and document compatibility boundaries.
+3. Add optional Jakarta JSON APIs and first-class FXML loading/binding.
+4. Deliver asynchronous entry points incrementally, based on their contracts.
+5. Upgrade the Jakarta profiles as a tested compatibility set, last.
+
+Each priority should land with focused unit and integration coverage, updated
+user-facing documentation, and release notes for any behavior or compatibility
+change.

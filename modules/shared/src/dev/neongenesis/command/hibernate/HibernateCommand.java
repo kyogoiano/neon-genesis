@@ -17,9 +17,10 @@
  */
 package dev.neongenesis.command.hibernate;
 
-import dev.neongenesis.command.Command;
+import java.io.Serializable;
+
 import org.hibernate.Session;
 
-public interface HibernateCommand extends Command {
+public interface HibernateCommand extends Serializable {
    public void setSession(Session session);
 }

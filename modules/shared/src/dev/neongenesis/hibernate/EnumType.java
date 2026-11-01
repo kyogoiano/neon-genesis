@@ -26,6 +26,7 @@ import java.sql.Types;
 import dev.neongenesis.helpers.EnumHelper;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.usertype.UserType;
 import org.apache.commons.beanutils.BeanUtils;
 
@@ -50,8 +51,8 @@ public abstract class EnumType implements UserType<Object> {
 
     @Override
     public Object nullSafeGet(ResultSet resultSet, int position,
-                              SharedSessionContractImplementor session, Object obj)
-                                     throws HibernateException, SQLException {
+                              WrapperOptions options)
+                                     throws SQLException {
        String key = resultSet.getString(position);
 
        return toEnum(key);
@@ -66,16 +67,17 @@ public abstract class EnumType implements UserType<Object> {
     }
 
     protected Object toEnum(String key) {
-       if (key == null || key.trim().length() == 0) {
+       if (key == null || key.trim().isEmpty()) {
           return null;
        }
 
        return EnumHelper.getInstance().valueOf(returnedClass(), key);
     }
 
+    @Override
     public void nullSafeSet(PreparedStatement preparedStatement, Object obj,
-                            int param, SharedSessionContractImplementor session)
-                            throws HibernateException, SQLException {
+                            int param, WrapperOptions options)
+                            throws SQLException {
        obj = toDatabaseObject(obj);
 
        if (obj == null) {

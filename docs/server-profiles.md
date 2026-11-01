@@ -4,7 +4,7 @@ Neon Genesis supports two Jakarta EE execution profiles out of the box:
 
 ```mermaid
 flowchart TD
-    Cmd["@Remotable / @Transactional Method\nor Query / Transaction"] --> Mode{"genesis.aspect.executionMode"}
+    Cmd["@Remotable / @Transactional Method"] --> Mode{"genesis.aspect.executionMode"}
     Mode -->|"cdi / nima (Default)"| CDI["CDICommandExecutionAspect"]
     Mode -->|"ejb"| EJB["EJBCommandExecutionAspect /\nLocalEJBCommandExecutionAspect"]
 
@@ -39,21 +39,21 @@ Designed for lightweight, cloud-native, and standalone SE deployments using **Ja
 
 ---
 
-## 2. Jakarta EE Web Profile (Open Liberty + EJB Lite 4.0 + CDI)
+## 2. Jakarta EE 11 Web Profile (Open Liberty + EJB Lite 4.0 + CDI 4.1)
 
-Designed for Jakarta EE Web Profile application servers such as **Open Liberty** (`webProfile-10.0` / `webProfile-11.0`):
+Designed for Jakarta EE 11 Web Profile application servers such as **Open Liberty** (`webProfile-11.0`):
 - **EJB Lite 4.0 Bean**: `dev.neongenesis.ejb.CommandExecutorEJB` (`@Stateless(name = "CommandExecutor")`, `@Local(CommandExecutorLocal.class)`).
-- **CDI + EJB Coexistence**: `META-INF/beans.xml` activates CDI beans alongside EJB Lite beans. `CommandExecutorEJB` supports `@Inject Instance<TransactionalInjector>` so CDI-managed injectors (`CDIHibernateTransactionalInjector`) work seamlessly with EJB Container-Managed Transactions (`@TransactionAttribute`), with fallback to JNDI `java:comp/env/TransactionalInjector`.
+- **CDI 4.1 + EJB Coexistence**: `META-INF/beans.xml` (version `4.1`) activates CDI beans alongside EJB Lite beans. `CommandExecutorEJB` supports `@Inject Instance<TransactionalInjector>` so CDI-managed injectors (`CDIHibernateTransactionalInjector`) work seamlessly with EJB Container-Managed Transactions (`@TransactionAttribute`), with fallback to JNDI `java:comp/env/TransactionalInjector`.
 
 ### Open Liberty `server.xml` Features
 ```xml
-<server description="Neon Genesis Jakarta EE Web Profile Server">
+<server description="Neon Genesis Jakarta EE 11 Web Profile Server">
    <featureManager>
-      <feature>webProfile-10.0</feature>
+      <feature>webProfile-11.0</feature>
       <feature>ejbLite-4.0</feature>
-      <feature>cdi-4.0</feature>
-      <feature>persistence-3.1</feature>
-      <feature>servlet-6.0</feature>
+      <feature>cdi-4.1</feature>
+      <feature>persistence-3.2</feature>
+      <feature>servlet-6.1</feature>
    </featureManager>
 </server>
 ```

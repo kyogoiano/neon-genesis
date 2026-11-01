@@ -18,46 +18,19 @@
 package dev.neongenesis.aspect;
 
 import java.lang.reflect.Method;
-import java.io.Serializable;
 
 import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.annotation.Transactional;
-import dev.neongenesis.command.Query;
-import dev.neongenesis.command.Transaction;
 
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.DeclareMixin;
-
-@Aspect
 public class CommandInvocationAspect {
-   @DeclareMixin("dev.neongenesis.command.Command+")
-   public static CommandResolver createCommandResolver() {
-      return new CommandResolverImpl();
-   }
-
    public static boolean isRemotable(Method method) {
       return !"false".equals(System.getProperty("genesis.aspect.useFastMode",
             "true"))
             || method.getAnnotation(Remotable.class) != null
-            || Query.class.isAssignableFrom(method.getDeclaringClass())
             || isTransactional(method);
    }
 
    public static boolean isTransactional(Method method) {
-      return method.getAnnotation(Transactional.class) != null
-            || Transaction.class.isAssignableFrom(method.getDeclaringClass());
-   }
-
-   public static class CommandResolverImpl implements CommandResolver,
-         Serializable {
-      private static final long serialVersionUID = 1L;
-
-      public boolean isRemotable(Method method) {
-         return CommandInvocationAspect.isRemotable(method);
-      }
-
-      public boolean isTransactional(Method method) {
-         return CommandInvocationAspect.isTransactional(method);
-      }
+      return method.getAnnotation(Transactional.class) != null;
    }
 }

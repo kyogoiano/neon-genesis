@@ -185,23 +185,6 @@ public class SwingBinder extends AbstractBinder {
    }
 
    /**
-    * Associates the specified widget binder with the field with the specified name.
-    * Use this to register a custom component binder to a specified field.
-    * 
-    * @param componentName the name with which the specified component binder is to be associated.
-    * @param binder the component binder to be associated with the specified name.
-    * @return previous component associated with specified name, or <tt>null</tt>
-    *          if none.
-    *
-    * Use <code>registerWidgetBinder(String,WidgetBinder)</code> instead
-    */
-   @Deprecated
-   public WidgetBinder registerComponentBinder(String componentName,
-         WidgetBinder binder) {
-      return registerWidgetBinder(componentName, binder);
-   }
-
-   /**
     * Associates the specified ButtonGroup with the field with the specified name.
     * Use this to bind ButtonGroups.
     * 

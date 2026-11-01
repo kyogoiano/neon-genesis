@@ -111,12 +111,9 @@ public class ScriptRegistry {
 
    protected Object newInstance(String className) {
       try {
-         return ClassesCache.getClass(className).newInstance();
-      } catch (InstantiationException e) {
-         throw new RuntimeException(e.getMessage(), e);
-      } catch (IllegalAccessException e) {
-         throw new RuntimeException(e.getMessage(), e);
-      } catch (ClassNotFoundException e) {
+         return ClassesCache.getClass(className).getDeclaredConstructor()
+               .newInstance();
+      } catch (ReflectiveOperationException e) {
          throw new RuntimeException(e.getMessage(), e);
       }
    }

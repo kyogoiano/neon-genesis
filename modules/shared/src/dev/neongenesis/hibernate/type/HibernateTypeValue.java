@@ -44,15 +44,14 @@ public class HibernateTypeValue {
    private static Type createCustomType(Class typeValue, Properties parameters)
          throws MappingException {
       try {
-         UserType userType = (UserType) typeValue.newInstance();
+         UserType userType = (UserType) typeValue.getDeclaredConstructor()
+               .newInstance();
          if (userType instanceof ParameterizedType) {
             ((ParameterizedType) userType).setParameterValues(parameters);
          }
          return new CustomType(userType, new TypeConfiguration());
-      } catch (InstantiationException e) {
+      } catch (ReflectiveOperationException e) {
          throw new MappingException("Could not instantiate user type " + typeValue, e);
-      } catch (IllegalAccessException e) {
-         throw new MappingException("Could not access user type " + typeValue, e);
       } catch (ClassCastException e) {
          throw new MappingException("Type does not implement UserType: " + typeValue, e);
       }

@@ -92,32 +92,6 @@ public class ValidatorTest extends TestCase {
 
    }
    
-   private void valueTestRequiredIf(Object bean, String methodName, Field field,
-         String action, boolean passed) throws Exception {
-      // Calls the BasicValidator static method
-      Validator validator = new Validator(resources, ValueBean.class.getName());
-      validator.setParameter(Validator.BEAN_PARAM, bean);
-      Method method = BasicValidator.class.getDeclaredMethod(methodName,
-            new Class[] { Object.class, Field.class, Validator.class });
-      boolean sucess = ((Boolean) method.invoke(null, new Object[] { bean,
-            field, validator })).booleanValue();
-      assertTrue(methodName + " for field " + field.getProperty() + " has "
-            + (passed ? "" : "not ") + "passed", passed ? sucess : !sucess);
-
-      // Performs regular validation
-      ValidatorResults results = validator.validate();
-      assertNotNull(results);
-      ValidatorResult result = results.getValidatorResult(field.getProperty());
-      assertNotNull(action + " value ValidatorResult should not be null.",
-            result);
-      assertTrue("Bean " + bean + " ValidatorResult should contain the '"
-            + action + "' action.", result.containsAction(action));
-      assertTrue("Bean  " + bean + "ValidatorResult for the '" + action
-            + "' action should have " + (passed ? "passed" : "failed") + ".",
-            (passed ? result.isValid(action) : !result.isValid(action)));
-
-   }
-
    public void testRequired() throws Exception {
       final Field field = form.getField("required");
       final String methodName = "validateRequired";
@@ -414,28 +388,6 @@ public class ValidatorTest extends TestCase {
       valueTest(map, methodName, field, action, false);
    }
 
-   public void testRequiredIf() throws Exception {
-      final Field field = form.getField("requiredIf");
-      final String methodName = "validateRequiredIf";
-      final String action = "requiredif";
-      final String field2 = "requiredIfDependency";
-      final Map map = new HashMap();
-      
-      map.put(field.getProperty(), "");
-      map.put(field2, "");
-      valueTestRequiredIf(map, methodName, field, action, true);
-      
-      map.put(field2, "                ");
-      valueTestRequiredIf(map, methodName, field, action, true);
-      
-      map.put(field2, "some value");
-      valueTestRequiredIf(map, methodName, field, action, false);
-      
-      map.put(field.getProperty(), "some value");
-      map.put(field2, "some value");
-      valueTestRequiredIf(map, methodName, field, action, true);
-   }
-
    public void testMask() throws Exception {
       final Field field = form.getField("mask");
       final String methodName = "validateMask";
@@ -600,23 +552,6 @@ public class ValidatorTest extends TestCase {
       valueTest(map, methodName, field, action, true);
 
       map.put(field.getProperty(), "9");
-      valueTest(map, methodName, field, action, true);
-   }
-
-   public void testJXPath() throws Exception {
-      final Field field = form.getField("jxpath");
-      final String methodName = "validateJXPath";
-      final String action = "jxpath";
-      final String field2 = "jxpathDependency";
-      final Map map = new HashMap();
-      
-      map.put(field2, "9");
-      valueTest(map, methodName, field, action, false);
-      
-      map.put(field2, "11");
-      valueTest(map, methodName, field, action, false);
-      
-      map.put(field2, "10");
       valueTest(map, methodName, field, action, true);
    }
 

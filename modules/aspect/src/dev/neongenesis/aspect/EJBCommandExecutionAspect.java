@@ -23,10 +23,7 @@ import javax.naming.InitialContext;
 
 import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.annotation.Transactional;
-import dev.neongenesis.command.Command;
 import dev.neongenesis.command.CommandExecutionGuard;
-import dev.neongenesis.command.Query;
-import dev.neongenesis.command.Transaction;
 import dev.neongenesis.ejb.CommandExecutor;
 
 import org.apache.commons.logging.Log;
@@ -48,23 +45,17 @@ public class EJBCommandExecutionAspect {
          "java:module/CommandExecutor!dev.neongenesis.ejb.CommandExecutorLocal",
          "java:module/CommandExecutor"
    };
-
    private CommandExecutor session;
-   private final ThreadLocal<Boolean> executingCommand = new ThreadLocal<Boolean>();
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       if (CDICommandExecutionAspect.isCdiExecutionEnabled()
             || LocalEJBCommandExecutionAspect.localEjbEnabled()) {
          return joinPoint.proceed();
       }
 
-      if (Boolean.TRUE.equals(executingCommand.get())
-            || CommandExecutionGuard.isExecuting()) {
+      if (CommandExecutionGuard.isExecuting()) {
          return joinPoint.proceed();
       }
 
@@ -87,7 +78,7 @@ public class EJBCommandExecutionAspect {
          classNames[i] = parameterTypes[i].getName();
       }
 
-      executingCommand.set(Boolean.TRUE);
+      CommandExecutionGuard.enter();
       try {
          CommandExecutor executor = getCommandExecutor();
          try {
@@ -101,7 +92,7 @@ public class EJBCommandExecutionAspect {
             throw e.getTargetException();
          }
       } finally {
-         executingCommand.remove();
+         CommandExecutionGuard.exit();
       }
    }
 

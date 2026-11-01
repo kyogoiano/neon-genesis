@@ -18,8 +18,6 @@
 package dev.neongenesis.aspect;
 
 import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 import dev.neongenesis.command.TransactionalInjector;
 
@@ -30,14 +28,13 @@ import org.aspectj.lang.reflect.MethodSignature;
 
 @Aspect
 public class LocalCommandExecutionAspect {
-   private final Map injectorsPerThread = new WeakHashMap();
-   private final Map processingThreads = new WeakHashMap();
+   private final ThreadLocal<TransactionalInjector> injectorPerThread =
+         new ThreadLocal<TransactionalInjector>();
+   private final ThreadLocal<Boolean> processingCommand =
+         new ThreadLocal<Boolean>();
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       Method method = ((MethodSignature)joinPoint.getSignature()).getMethod();
       if (!isLocalTestExecution(method.getDeclaringClass())) {
@@ -47,25 +44,26 @@ public class LocalCommandExecutionAspect {
       Object target = joinPoint.getTarget();
       boolean transactional = CommandInvocationAspect.isTransactional(method);
       if ((!transactional && !CommandInvocationAspect.isRemotable(method))
-            || isReentrant()) {
+            || Boolean.TRUE.equals(processingCommand.get())) {
          return joinPoint.proceed();
       }
 
-      TransactionalInjector injector = getTransactionalInjector();
+      processingCommand.set(Boolean.TRUE);
       try {
+         TransactionalInjector injector = getTransactionalInjector();
          injector.beforeInvocation(target, transactional);
-         Object result = joinPoint.proceed();
-         injector.afterInvocation();
-         return result;
-      } catch (Exception e) {
-         injector.onException(e);
-         throw e;
-      } finally {
          try {
-            injector.onFinally();
+            Object result = joinPoint.proceed();
+            injector.afterInvocation();
+            return result;
+         } catch (Exception e) {
+            injector.onException(e);
+            throw e;
          } finally {
-            processingThreads.remove(Thread.currentThread());
+            injector.onFinally();
          }
+      } finally {
+         processingCommand.remove();
       }
    }
 
@@ -77,28 +75,18 @@ public class LocalCommandExecutionAspect {
    }
 
    private TransactionalInjector getTransactionalInjector() throws Exception {
-      Thread currentThread = Thread.currentThread();
-      TransactionalInjector injector =
-            (TransactionalInjector)injectorsPerThread.get(currentThread);
+      TransactionalInjector injector = injectorPerThread.get();
       if (injector == null) {
+         Thread currentThread = Thread.currentThread();
          String className = System.getProperty(
                "genesis.aspect.transactionalInjector",
                "dev.neongenesis.aspect.HibernateTransactionalInjector");
          ClassLoader loader = currentThread.getContextClassLoader();
          injector = (TransactionalInjector)Class.forName(className, true, loader)
-               .newInstance();
+               .getDeclaredConstructor().newInstance();
          injector.init(null);
-         injectorsPerThread.put(currentThread, injector);
+         injectorPerThread.set(injector);
       }
       return injector;
-   }
-
-   private boolean isReentrant() {
-      Thread currentThread = Thread.currentThread();
-      if (Boolean.TRUE.equals(processingThreads.get(currentThread))) {
-         return true;
-      }
-      processingThreads.put(currentThread, Boolean.TRUE);
-      return false;
    }
 }
