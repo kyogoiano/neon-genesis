@@ -45,9 +45,7 @@ public class EJBCommandExecutionAspect {
          "java:module/CommandExecutor!dev.neongenesis.ejb.CommandExecutorLocal",
          "java:module/CommandExecutor"
    };
-
    private CommandExecutor session;
-   private final ThreadLocal<Boolean> executingCommand = new ThreadLocal<Boolean>();
 
    @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
          + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
@@ -57,8 +55,7 @@ public class EJBCommandExecutionAspect {
          return joinPoint.proceed();
       }
 
-      if (Boolean.TRUE.equals(executingCommand.get())
-            || CommandExecutionGuard.isExecuting()) {
+      if (CommandExecutionGuard.isExecuting()) {
          return joinPoint.proceed();
       }
 
@@ -81,7 +78,7 @@ public class EJBCommandExecutionAspect {
          classNames[i] = parameterTypes[i].getName();
       }
 
-      executingCommand.set(Boolean.TRUE);
+      CommandExecutionGuard.enter();
       try {
          CommandExecutor executor = getCommandExecutor();
          try {
@@ -95,7 +92,7 @@ public class EJBCommandExecutionAspect {
             throw e.getTargetException();
          }
       } finally {
-         executingCommand.remove();
+         CommandExecutionGuard.exit();
       }
    }
 

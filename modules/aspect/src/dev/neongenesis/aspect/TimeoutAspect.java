@@ -218,7 +218,8 @@ public class TimeoutAspect {
 
    private final long timeout;
    private final boolean keepThreadInstance;
-   private final ThreadLocal threadLocal = new ThreadLocal();
+   private final ThreadLocal<WorkerThread> threadLocal =
+         new ThreadLocal<WorkerThread>();
    
    public TimeoutAspect() {
       this.timeout = Long.parseLong(System.getProperty(
@@ -228,7 +229,7 @@ public class TimeoutAspect {
    }
 
    private WorkerThread getWorkerThread() {
-      return (WorkerThread)threadLocal.get();
+      return threadLocal.get();
    }
 
    private void setWorkerThread(WorkerThread workerThread) {

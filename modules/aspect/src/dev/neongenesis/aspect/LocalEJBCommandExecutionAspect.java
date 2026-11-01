@@ -36,7 +36,7 @@ public class LocalEJBCommandExecutionAspect {
    private static final Log log =
          LogFactory.getLog(LocalEJBCommandExecutionAspect.class);
 
-   private final ThreadLocal threadLocal = new InheritableThreadLocal();
+   private final ThreadLocal<Method> commandMethod = new ThreadLocal<Method>();
    private CommandExecutorLocal session;
 
    @Pointcut("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
@@ -52,13 +52,8 @@ public class LocalEJBCommandExecutionAspect {
       }
 
       Method method = ((MethodSignature)joinPoint.getSignature()).getMethod();
-      Method nestedMethod = (Method)threadLocal.get();
-      if (nestedMethod != null && nestedMethod.equals(method)) {
-         try {
-            return joinPoint.proceed();
-         } finally {
-            threadLocal.remove();
-         }
+      if (method.equals(commandMethod.get())) {
+         return joinPoint.proceed();
       }
 
       if (!CommandInvocationAspect.isTransactional(method)
@@ -74,7 +69,7 @@ public class LocalEJBCommandExecutionAspect {
 
       try {
          CommandExecutorLocal executor = getCommandExecutor();
-         threadLocal.set(method);
+         commandMethod.set(method);
          if (CommandInvocationAspect.isTransactional(method)) {
             return executor.executeTransaction(joinPoint.getTarget(),
                   method.getName(), classNames, joinPoint.getArgs());
@@ -84,7 +79,7 @@ public class LocalEJBCommandExecutionAspect {
       } catch (InvocationTargetException e) {
          throw e.getTargetException();
       } finally {
-         threadLocal.remove();
+         commandMethod.remove();
       }
    }
 

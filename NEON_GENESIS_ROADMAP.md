@@ -37,6 +37,10 @@ command calls remain synchronous, and EJB execution remains container-managed;
 changing those paths requires separate transaction and context-propagation
 validation. No direct platform-thread creation sites remain in framework code;
 threads owned by CDI/EJB containers remain under container control.
+CDI and EJB dispatch reuse the shared command-execution guard instead of
+maintaining duplicate thread-local flags. Criteria and local-EJB reentrancy
+markers use non-inheritable, typed thread-local state, and the local execution
+test aspect uses typed thread-local state instead of thread-keyed weak maps.
 
 **Acceptance criteria**
 
