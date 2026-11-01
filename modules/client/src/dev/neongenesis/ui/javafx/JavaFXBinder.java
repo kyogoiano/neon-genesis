@@ -43,10 +43,13 @@ import javafx.scene.control.ToggleGroup;
 public class JavaFXBinder extends AbstractBinder {
    public static final String BINDER_KEY = "genesis:JavaFXBinder"; // NOI18N
    public static final String BUTTON_GROUP_SELECTION_VALUE_KEY = "genesis:buttonGroupSelectionValue"; // NOI18N
+   private static final int DEFAULT_ASYNC_BATCH_PARALLELISM =
+         Math.max(1, Runtime.getRuntime().availableProcessors());
 
    private final NodeBinderRegistry factory = NodeBinderRegistry.getInstance();
    private final Object asyncTaskLock = new Object();
    private final Set<AsyncTask<?>> asyncTasks = new HashSet<>();
+   private final Set<CompletableFuture<?>> asyncBatches = new HashSet<>();
    private boolean acceptsAsyncTasks;
    private long asyncTaskSequence;
 
@@ -139,6 +142,71 @@ public class JavaFXBinder extends AbstractBinder {
       }
    }
 
+   /**
+    * Runs a batch of blocking operations in parallel on virtual threads,
+    * limiting concurrency to the number of available processors. Results are
+    * returned in input order, regardless of completion order.
+    *
+    * <p>If an operation fails, the batch completes exceptionally and the
+    * remaining in-flight operations are cancelled. Cancelling the returned
+    * future interrupts in-flight workers; operations must cooperate with
+    * interruption. Unbinding this binder cancels the batch.</p>
+    *
+    * @param operations the blocking operations to run
+    * @param <T> the result type
+    * @return a future completed on the JavaFX Application Thread
+    */
+   public <T> CompletableFuture<List<T>> runAsyncBatch(
+         List<? extends Callable<? extends T>> operations) {
+      return runAsyncBatch(operations, DEFAULT_ASYNC_BATCH_PARALLELISM);
+   }
+
+   /**
+    * Runs a batch of blocking operations in parallel on virtual threads,
+    * limiting the number of concurrently running operations. Results are
+    * returned in input order, regardless of completion order.
+    *
+    * @param operations the blocking operations to run
+    * @param maxParallelism maximum number of operations to run concurrently
+    * @param <T> the result type
+    * @return a future completed on the JavaFX Application Thread
+    */
+   public <T> CompletableFuture<List<T>> runAsyncBatch(
+         List<? extends Callable<? extends T>> operations,
+         int maxParallelism) {
+      Objects.requireNonNull(operations, "operations");
+      if (maxParallelism < 1) {
+         throw new IllegalArgumentException(
+               "maxParallelism must be greater than zero");
+      }
+
+      List<Callable<? extends T>> operationSnapshot =
+            new ArrayList<>(operations.size());
+      for (Callable<? extends T> operation : operations) {
+         operationSnapshot.add(Objects.requireNonNull(operation, "operation"));
+      }
+
+      AsyncBatch<T> batch = new AsyncBatch<>(operationSnapshot, maxParallelism);
+      synchronized (asyncTaskLock) {
+         if (!acceptsAsyncTasks) {
+            throw new IllegalStateException(
+                  "JavaFXBinder must be bound before running asynchronous work");
+         }
+         asyncBatches.add(batch.result);
+      }
+      batch.result.whenComplete((result, failure) -> {
+         synchronized (asyncTaskLock) {
+            asyncBatches.remove(batch.result);
+         }
+         if (batch.result.isCancelled()) {
+            batch.cancelRunning();
+         }
+      });
+
+      batch.start();
+      return batch.result;
+   }
+
    private void removeAsyncTask(AsyncTask<?> task) {
       synchronized (asyncTaskLock) {
          asyncTasks.remove(task);
@@ -147,9 +215,15 @@ public class JavaFXBinder extends AbstractBinder {
 
    private void cancelAsyncTasks() {
       List<AsyncTask<?>> tasks;
+      List<CompletableFuture<?>> batches;
       synchronized (asyncTaskLock) {
          acceptsAsyncTasks = false;
          tasks = new ArrayList<>(asyncTasks);
+         batches = new ArrayList<>(asyncBatches);
+      }
+
+      for (CompletableFuture<?> batch : batches) {
+         batch.cancel(true);
       }
 
       for (AsyncTask<?> task : tasks) {
@@ -192,6 +266,131 @@ public class JavaFXBinder extends AbstractBinder {
    protected void markUnbound() {
       if (getRoot() instanceof Node node) {
          node.getProperties().put(GENESIS_BOUND, Boolean.FALSE);
+      }
+   }
+
+   private final class AsyncBatch<T> {
+      private final List<? extends Callable<? extends T>> operations;
+      private final int maxParallelism;
+      private final Object lock = new Object();
+      private final List<T> results;
+      private final Set<CompletableFuture<T>> running = new HashSet<>();
+      private final CompletableFuture<List<T>> result = new CompletableFuture<>();
+      private int nextOperation;
+      private int completedCount;
+
+      private AsyncBatch(
+            List<? extends Callable<? extends T>> operations,
+            int maxParallelism) {
+         this.operations = operations;
+         this.maxParallelism = maxParallelism;
+         results = new ArrayList<>(operations.size());
+         for (int i = 0; i < operations.size(); i++) {
+            results.add(null);
+         }
+      }
+
+      private void start() {
+         if (operations.isEmpty()) {
+            dispatchToFxThread(() -> result.complete(new ArrayList<>(results)));
+            return;
+         }
+
+         for (int i = 0; i < Math.min(maxParallelism, operations.size()); i++) {
+            launchNext();
+         }
+      }
+
+      private void launchNext() {
+         final int index;
+         synchronized (lock) {
+            if (result.isDone() || nextOperation == operations.size()) {
+               return;
+            }
+            index = nextOperation++;
+         }
+
+         final CompletableFuture<T> task;
+         try {
+            task = JavaFXBinder.this.runAsync(
+                  () -> operations.get(index).call());
+         } catch (RuntimeException | Error failure) {
+            dispatchToFxThread(() -> operationCompleted(index, null, null,
+                  failure));
+            return;
+         }
+
+         synchronized (lock) {
+            if (result.isDone()) {
+               task.cancel(true);
+            } else {
+               running.add(task);
+            }
+         }
+
+         task.whenComplete((value, failure) -> dispatchToFxThread(
+               () -> operationCompleted(index, task, value, failure)));
+      }
+
+      private void operationCompleted(int index, CompletableFuture<T> task,
+            T value, Throwable failure) {
+         boolean startNext = false;
+         boolean complete = false;
+         List<T> completedResults = null;
+         synchronized (lock) {
+            if (task != null) {
+               running.remove(task);
+            }
+
+            if (result.isDone()) {
+               return;
+            }
+
+            if (failure == null) {
+               results.set(index, value);
+               completedCount++;
+               if (completedCount == operations.size()) {
+                  complete = true;
+                  completedResults = new ArrayList<>(results);
+               } else {
+                  startNext = true;
+               }
+            }
+         }
+
+         if (failure != null) {
+            if (result.completeExceptionally(failure)) {
+               cancelRunning();
+            }
+         } else if (complete) {
+            result.complete(completedResults);
+         } else if (startNext) {
+            launchNext();
+         }
+      }
+
+      private void dispatchToFxThread(Runnable action) {
+         if (Platform.isFxApplicationThread()) {
+            action.run();
+            return;
+         }
+
+         try {
+            Platform.runLater(action);
+         } catch (IllegalStateException dispatchFailure) {
+            result.completeExceptionally(dispatchFailure);
+         }
+      }
+
+      private void cancelRunning() {
+         List<CompletableFuture<T>> tasks;
+         synchronized (lock) {
+            tasks = new ArrayList<>(running);
+         }
+
+         for (CompletableFuture<T> task : tasks) {
+            task.cancel(true);
+         }
       }
    }
 

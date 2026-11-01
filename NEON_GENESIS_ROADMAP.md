@@ -188,13 +188,18 @@ thread. Cancelling the future interrupts the worker, and binder unbinding
 cancels active tasks. Failures are delivered through exceptional completion;
 thread-bound contexts are not propagated. It applies no default timeout;
 callers configure timeouts according to the operation being performed.
+`runAsyncBatch` adds bounded parallel execution with input-ordered results,
+configurable maximum concurrency, fail-fast error propagation, and
+cancellation of in-flight siblings.
 
 **Acceptance criteria**
 
 - [x] The JavaFX task API has a documented contract for completion,
   cancellation, errors, and execution context.
+- [x] Batched tasks run in parallel up to a configurable limit, preserve input
+  result order, and cancel in-flight siblings on failure or unbind.
 - [x] Tests cover virtual-thread execution, FX-thread completion, failure
-  propagation, and cancellation on unbind.
+  propagation, concurrency limits, batch ordering, and cancellation.
 - Each additional async path has a written contract for completion,
   cancellation, timeout, errors, and execution context.
 - Existing synchronous callers retain their behavior.

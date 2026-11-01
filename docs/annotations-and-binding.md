@@ -91,6 +91,25 @@ cancels outstanding tasks and prevents their results from being applied.
 Cancellation callbacks run on the thread that requested cancellation. The API
 does not impose a timeout; configure a timeout appropriate to the operation.
 
+For independent operations, `runAsyncBatch` runs tasks in parallel while
+preserving their input order in the result. By default, it limits concurrency
+to the number of available processors; pass `maxParallelism` to choose another
+positive limit:
+
+```java
+binder.runAsyncBatch(List.of(
+      () -> service.loadCustomers(),
+      () -> service.loadProducts(),
+      () -> service.loadOrders()), 2)
+      .thenAccept(results -> updateDashboard(results));
+```
+
+The batch fails on the first failed operation and cancels in-flight siblings;
+operations not yet started are not run. Cancelling the batch or unbinding the
+binder interrupts in-flight workers. As with individual tasks, operations need
+to cooperate with interruption, cancellation does not roll back side effects,
+and no timeout or thread-bound context propagation is provided.
+
 ### Swing (`SwingBinder`)
 `SwingBinder` binds a Swing `Component` / `Container` hierarchy to a `@Form` and `@ViewHandler`:
 - Matches components by `Component#getName()`.
