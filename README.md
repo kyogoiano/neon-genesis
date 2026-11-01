@@ -8,7 +8,7 @@ Originally forked from the Summa Genesis framework, **Neon Genesis** modernizes 
 - **Dual Jakarta EE 11 Server Profiles**:
   - **Core Profile**: **Helidon 4 Níma SE** (virtual threads) + **CDI 4.1 Lite** (Weld SE 6)
   - **Web Profile**: **Open Liberty 26+** (`webProfile-11.0`) + **EJB Lite 4.0** + **CDI 4.1**
-- **Hibernate ORM 7** (`jakarta.persistence` 3.2), declarative `@Transactional` / `@Remotable` commands, `@Criteria` dynamic queries, and paging
+- **Hibernate ORM 7.4.x** (`jakarta.persistence` 3.2), declarative `@Transactional` / `@Remotable` commands, `@Criteria` dynamic queries, and paging
 
 ---
 

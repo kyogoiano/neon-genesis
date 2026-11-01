@@ -1,5 +1,9 @@
 # Persistence, Transactions, Dynamic `@Criteria` & Paging
 
+The persistence baseline is Hibernate ORM 7.4.14.Final with Jakarta Persistence
+3.2. The ORM version is independent of the CDI API version; CDI 5.0 Lite remains
+part of the planned final Jakarta EE 12 migration.
+
 ## 1. Hibernate Commands (`AbstractHibernateCommand`)
 
 Server commands that interact with Hibernate extend `AbstractHibernateCommand` and annotate methods with `@Remotable` (read-only query) or `@Transactional` (read-write transaction with automatic flush, commit, and rollback on exception):
@@ -9,7 +13,8 @@ public class UserCommands extends AbstractHibernateCommand {
 
    @Remotable
    public List<User> findAll() {
-      return getSession().createQuery("from User u order by u.name", User.class).list();
+      return getSession().createQuery("from User u order by u.name", User.class)
+            .getResultList();
    }
 
    @Transactional
@@ -59,6 +64,7 @@ Only non-empty properties on `userSearchForm` that have matching setter methods 
 ```java
 @Remotable
 public Page findUsersPage(int pageNumber, int resultsPerPage) throws Exception {
-   return getPage(getSession().createQuery("from User"), pageNumber, resultsPerPage);
+   return getPage(getSession().createQuery("from User", User.class),
+         pageNumber, resultsPerPage);
 }
 ```

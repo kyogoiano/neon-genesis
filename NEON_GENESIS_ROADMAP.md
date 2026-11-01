@@ -196,6 +196,10 @@ Review related specifications and provider versions together rather than
 upgrading individual artifacts without a tested compatibility set. Revalidate
 the JSON APIs and providers from Priority 3 as part of this migration.
 
+**Preparation:** Hibernate ORM 7.4.14.Final is now the tested persistence
+baseline with Jakarta Persistence 3.2. This ORM upgrade is independent of the
+CDI API level; CDI 5.0 Lite remains deferred to this final migration.
+
 **Acceptance criteria**
 
 - CDI 5.0 Lite integration works in the supported standalone and application
