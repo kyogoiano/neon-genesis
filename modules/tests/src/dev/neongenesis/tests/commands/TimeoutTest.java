@@ -40,6 +40,10 @@ public class TimeoutTest extends TestCase {
         assertNull(e);
     }
 
+    public void testUsesVirtualThread() {
+        assertTrue(new TimeoutCommand().runsOnVirtualThread());
+    }
+
     public void testWaitALot() throws Exception {
         TimeoutCommand command = new TimeoutCommand();
         Exception e = null;
@@ -66,6 +70,11 @@ public class TimeoutTest extends TestCase {
         @Remotable
         public void dontWait() {
            System.out.println("dont wait");   
+        }
+
+        @Remotable
+        public boolean runsOnVirtualThread() {
+            return Thread.currentThread().isVirtual();
         }
 
     }

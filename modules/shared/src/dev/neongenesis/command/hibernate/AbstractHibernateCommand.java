@@ -81,7 +81,7 @@ public abstract class AbstractHibernateCommand implements HibernateCommand {
          hql.append(" order by ").append(orderBy); // NOI18N
       }
 
-      Query q = getSession().createQuery(hql.toString());
+      Query q = getSession().createQuery(hql.toString(), Object.class);
 
       for (Iterator i = parameters.entrySet().iterator(); i.hasNext();) {
          e = (Map.Entry) i.next();

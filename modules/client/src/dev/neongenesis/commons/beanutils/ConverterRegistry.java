@@ -32,29 +32,21 @@ import dev.neongenesis.registry.Registry;
 
 import org.apache.commons.beanutils.ConvertUtilsBean;
 import org.apache.commons.beanutils.Converter;
+import org.apache.commons.beanutils.converters.ArrayConverter;
 import org.apache.commons.beanutils.converters.BigIntegerConverter;
-import org.apache.commons.beanutils.converters.BooleanArrayConverter;
 import org.apache.commons.beanutils.converters.BooleanConverter;
-import org.apache.commons.beanutils.converters.ByteArrayConverter;
 import org.apache.commons.beanutils.converters.ByteConverter;
-import org.apache.commons.beanutils.converters.CharacterArrayConverter;
 import org.apache.commons.beanutils.converters.CharacterConverter;
 import org.apache.commons.beanutils.converters.ClassConverter;
-import org.apache.commons.beanutils.converters.DoubleArrayConverter;
 import org.apache.commons.beanutils.converters.DoubleConverter;
 import org.apache.commons.beanutils.converters.FileConverter;
-import org.apache.commons.beanutils.converters.FloatArrayConverter;
 import org.apache.commons.beanutils.converters.FloatConverter;
-import org.apache.commons.beanutils.converters.IntegerArrayConverter;
 import org.apache.commons.beanutils.converters.IntegerConverter;
-import org.apache.commons.beanutils.converters.LongArrayConverter;
 import org.apache.commons.beanutils.converters.LongConverter;
-import org.apache.commons.beanutils.converters.ShortArrayConverter;
 import org.apache.commons.beanutils.converters.ShortConverter;
 import org.apache.commons.beanutils.converters.SqlDateConverter;
 import org.apache.commons.beanutils.converters.SqlTimeConverter;
 import org.apache.commons.beanutils.converters.SqlTimestampConverter;
-import org.apache.commons.beanutils.converters.StringArrayConverter;
 import org.apache.commons.beanutils.converters.StringConverter;
 import org.apache.commons.beanutils.converters.URLConverter;
 
@@ -65,34 +57,40 @@ public final class ConverterRegistry extends ConvertUtilsBean {
       getRegistry().register(BigInteger.class, new BigIntegerConverter());
       registry.register(Boolean.TYPE, new BooleanConverter(Boolean.FALSE));
       registry.register(Boolean.class, new BooleanConverter(null));
-      registry.register(boolean[].class, new BooleanArrayConverter(
-            new boolean[0]));
+      registry.register(boolean[].class, new ArrayConverter(boolean[].class,
+            new BooleanConverter(Boolean.FALSE), 0));
       registry.register(Byte.TYPE, new ByteConverter((byte) 0));
       registry.register(Byte.class, new ByteConverter(null));
-      registry.register(byte[].class, new ByteArrayConverter(new byte[0]));
+      registry.register(byte[].class, new ArrayConverter(byte[].class,
+            new ByteConverter((byte) 0), 0));
       registry.register(Character.TYPE, new CharacterConverter(' '));
       registry.register(Character.class, new CharacterConverter(null));
-      registry.register(char[].class, new CharacterArrayConverter(new char[0]));
+      registry.register(char[].class, new ArrayConverter(char[].class,
+            new CharacterConverter(' '), 0));
       registry.register(Class.class, new ClassConverter());
       registry.register(Double.TYPE, new DoubleConverter(0.0));
       registry.register(Double.class, new DoubleConverter(null));
-      registry
-            .register(double[].class, new DoubleArrayConverter(new double[0]));
+      registry.register(double[].class, new ArrayConverter(double[].class,
+            new DoubleConverter(0.0), 0));
       registry.register(Float.TYPE, new FloatConverter(0.0f));
       registry.register(Float.class, new FloatConverter(null));
-      registry.register(float[].class, new FloatArrayConverter(new float[0]));
+      registry.register(float[].class, new ArrayConverter(float[].class,
+            new FloatConverter(0.0f), 0));
       registry.register(Integer.TYPE, new IntegerConverter(0));
       registry.register(Integer.class, new IntegerConverter(null));
-      registry.register(int[].class, new IntegerArrayConverter(new int[0]));
+      registry.register(int[].class, new ArrayConverter(int[].class,
+            new IntegerConverter(0), 0));
       registry.register(Long.TYPE, new LongConverter(0L));
       registry.register(Long.class, new LongConverter(null));
-      registry.register(long[].class, new LongArrayConverter(new long[0]));
+      registry.register(long[].class, new ArrayConverter(long[].class,
+            new LongConverter(0L), 0));
       registry.register(Short.TYPE, new ShortConverter((short) 0));
       registry.register(Short.class, new ShortConverter(null));
-      registry.register(short[].class, new ShortArrayConverter(new short[0]));
+      registry.register(short[].class, new ArrayConverter(short[].class,
+            new ShortConverter((short) 0), 0));
       registry.register(String.class, new StringConverter());
-      registry
-            .register(String[].class, new StringArrayConverter(new String[0]));
+      registry.register(String[].class, new ArrayConverter(String[].class,
+            new StringConverter(), 0));
       registry.register(Date.class, new SqlDateConverter());
       registry.register(Time.class, new SqlTimeConverter());
       registry.register(Timestamp.class, new SqlTimestampConverter());

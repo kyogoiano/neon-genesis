@@ -24,8 +24,6 @@ import jakarta.transaction.UserTransaction;
 import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.annotation.Transactional;
 import dev.neongenesis.command.hibernate.AbstractHibernateCommand;
-import dev.neongenesis.command.hibernate.AbstractHibernateQuery;
-import dev.neongenesis.command.hibernate.AbstractHibernateTransaction;
 import dev.neongenesis.tests.TestCase;
 
 
@@ -100,7 +98,7 @@ public class HibernateCommandTest extends TestCase {
 
     }
 
-    public static class HibernateQuery extends AbstractHibernateQuery {
+    public static class HibernateQuery extends AbstractHibernateCommand {
 
         private int value;
 
@@ -109,6 +107,7 @@ public class HibernateCommandTest extends TestCase {
             return getSession() != null;
         }
 
+        @Remotable
         public int invokeRemotable() throws Exception {
             value++;
             return ((UserTransaction) new InitialContext().lookup(
@@ -116,7 +115,7 @@ public class HibernateCommandTest extends TestCase {
         }
     }
 
-    public static class HibernateTransaction extends AbstractHibernateTransaction {
+    public static class HibernateTransaction extends AbstractHibernateCommand {
 
         private int value;
 
@@ -125,6 +124,7 @@ public class HibernateCommandTest extends TestCase {
             return getSession() != null;
         }
 
+        @Transactional
         public int invokeTransactional() throws Exception {
             value++;
             return ((UserTransaction) new InitialContext().lookup(

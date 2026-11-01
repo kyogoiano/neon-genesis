@@ -188,16 +188,13 @@ public class JListComponentBinder extends AbstractComponentBinder {
             return null;
          }
          
-         int i = 0;
-         for (; i < indexes.length; i++) {
-            if (indexes[i] == 0) {
-               continue;
+         List selectedValues = component.getSelectedValuesList();
+         for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] != 0) {
+               return getKey(selectedValues.get(i));
             }
          }
-
-         // This method is not useful for dataproviders,
-         // so return the key of the first selected value;
-         return getKey(component.getSelectedValues()[i]);
+         return null;
       }
 
       public void setValue(Object value) throws Exception {

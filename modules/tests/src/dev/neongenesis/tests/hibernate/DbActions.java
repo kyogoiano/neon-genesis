@@ -45,7 +45,7 @@ public class DbActions extends AbstractHibernateCommand {
     @Remotable
     public List getPrimaryKeys() {
         return getSession().createQuery(
-              "select bean.pk from HibernateBean bean").list();
+              "select bean.pk from HibernateBean bean", Long.class).list();
     }
 
     @Remotable
@@ -58,7 +58,8 @@ public class DbActions extends AbstractHibernateCommand {
     @Remotable
 	public Page getPageUsingQuery(int pageNumber, int resultsPerPage)
 			throws Exception {
-		return getPage(getSession().createQuery("from HibernateBean"),
+		return getPage(getSession().createQuery("from HibernateBean",
+              HibernateBean.class),
 				pageNumber, resultsPerPage);
 	}
 }

@@ -4,7 +4,7 @@ Neon Genesis supports two Jakarta EE execution profiles out of the box:
 
 ```mermaid
 flowchart TD
-    Cmd["@Remotable / @Transactional Method\nor Query / Transaction"] --> Mode{"genesis.aspect.executionMode"}
+    Cmd["@Remotable / @Transactional Method"] --> Mode{"genesis.aspect.executionMode"}
     Mode -->|"cdi / nima (Default)"| CDI["CDICommandExecutionAspect"]
     Mode -->|"ejb"| EJB["EJBCommandExecutionAspect /\nLocalEJBCommandExecutionAspect"]
 

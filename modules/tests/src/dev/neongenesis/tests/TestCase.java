@@ -76,16 +76,16 @@ public class TestCase extends junit.framework.TestCase {
                NIMA_SERVER.getHealthEndpointUrl());
       }
 
-      Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-         public void run() {
-            if (NIMA_SERVER != null) {
-               NIMA_SERVER.stop();
-            }
-            if (EJB_LITE_CONTAINER != null) {
-               EJB_LITE_CONTAINER.close();
-            }
-         }
-      }));
+      Runtime.getRuntime().addShutdownHook(Thread.ofVirtual()
+            .name("Neon Genesis test shutdown")
+            .unstarted(() -> {
+               if (NIMA_SERVER != null) {
+                  NIMA_SERVER.stop();
+               }
+               if (EJB_LITE_CONTAINER != null) {
+                  EJB_LITE_CONTAINER.close();
+               }
+            }));
    }
 
    public static HelidonCommandServer getNimaServer() {

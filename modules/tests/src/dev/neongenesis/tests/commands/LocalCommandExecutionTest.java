@@ -20,8 +20,6 @@ package dev.neongenesis.tests.commands;
 import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.annotation.Transactional;
 import dev.neongenesis.command.hibernate.AbstractHibernateCommand;
-import dev.neongenesis.command.hibernate.AbstractHibernateQuery;
-import dev.neongenesis.command.hibernate.AbstractHibernateTransaction;
 import dev.neongenesis.tests.TestCase;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -115,12 +113,13 @@ public class LocalCommandExecutionTest extends TestCase {
         }
     }
 
-    public static class NoopQuery extends AbstractHibernateQuery {
+    public static class NoopQuery extends AbstractHibernateCommand {
 
         private FlushMode flushMode;
         private Session hibernateSession;
         private int value;
 
+        @Remotable
         public void invokeRemotable() {
             value++;
             flushMode = getSession().getHibernateFlushMode();
@@ -132,12 +131,13 @@ public class LocalCommandExecutionTest extends TestCase {
         }
     }
 
-    public static class NoopTransaction extends AbstractHibernateTransaction {
+    public static class NoopTransaction extends AbstractHibernateCommand {
 
         private FlushMode flushMode;
         private Session hibernateSession;
         private int value;
 
+        @Transactional
         public void invokeTransactional() {
             value++;
             flushMode = getSession().getHibernateFlushMode();

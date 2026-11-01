@@ -26,14 +26,9 @@ import dev.neongenesis.script.ScriptRegistry;
 import org.apache.commons.beanutils.ConvertUtils;
 import org.apache.commons.validator.Field;
 import org.apache.commons.validator.GenericValidator;
-import org.apache.commons.validator.Validator;
 import org.apache.commons.validator.util.ValidatorUtils;
 
 public class BasicValidator {
-   public final static String FIELD_TEST_NULL = "NULL"; // NOI18N
-   public final static String FIELD_TEST_NOTNULL = "NOTNULL"; // NOI18N
-   public final static String FIELD_TEST_EQUAL = "EQUAL"; // NOI18N
-   
    public static boolean validateRequired(Object bean, Field field) {
       return !GenericValidator.isBlankOrNull(ValidatorUtils.getValueAsString(
             bean, field.getProperty()));
@@ -134,88 +129,6 @@ public class BasicValidator {
             value);
    }
    
-   /**
-    * use validateScript(Object,Field) instead
-    */
-   @Deprecated
-   public static boolean validateRequiredIf(Object bean, Field field,
-         Validator validator) {
-      final Object form = validator.getParameterValue(Validator.BEAN_PARAM);
-      String value = null;
-      boolean required = false;
-      
-      if (isString(bean)) {
-         value = (String) bean;
-      } else {
-         value = ValidatorUtils.getValueAsString(bean, field.getProperty());
-      }
-      
-      String fieldJoin = "AND"; // NOI18N
-      
-      if (!GenericValidator.isBlankOrNull(field.getVarValue("fieldJoin"))) { // NOI18N
-         fieldJoin = field.getVarValue("fieldJoin"); // NOI18N
-      }
-      
-      if (fieldJoin.equalsIgnoreCase("AND")) { // NOI18N
-         required = true;
-      }
-      
-      for (int i = 0 ; !GenericValidator.isBlankOrNull(field.getVarValue(
-            "field[" + i + "]")); i++) { // NOI18N
-         String dependProp = field.getVarValue("field[" + i + "]"); // NOI18N
-         String dependTest = field.getVarValue("fieldTest[" + i + "]"); // NOI18N
-         String dependTestValue = field.getVarValue("fieldValue[" + i + "]"); // NOI18N
-         String dependIndexed = field.getVarValue("fieldIndexed[" + i + "]"); // NOI18N
-         
-         if (dependIndexed == null) {
-            dependIndexed = "false"; // NOI18N
-         }
-         
-         String dependVal = null;
-         boolean thisRequired = false;
-         
-         if (field.isIndexed() && dependIndexed.equalsIgnoreCase("true")) { // NOI18N
-            String key = field.getKey();
-            
-            if ((key.indexOf("[") > -1) && (key.indexOf("]") > -1)) { // NOI18N
-               String ind = key.substring(0, key.indexOf(".") + 1); // NOI18N
-               dependProp = ind + dependProp;
-            }
-         }
-         
-         dependVal = ValidatorUtils.getValueAsString(form, dependProp);
-         
-         if (dependTest.equals(FIELD_TEST_NULL) ||
-               dependTest.equals(FIELD_TEST_NOTNULL)) {
-            thisRequired = GenericValidator.isBlankOrNull(dependVal);
-            
-            if (dependTest.equals(FIELD_TEST_NOTNULL)) {
-               thisRequired = !thisRequired;
-            }
-         }
-         
-         if (dependTest.equals(FIELD_TEST_EQUAL)) {
-            thisRequired =  dependTestValue.equalsIgnoreCase(dependVal);
-         }
-         
-         if (fieldJoin.equalsIgnoreCase("AND")) { // NOI18N
-            required = required && thisRequired;
-         } else {
-            required = required || thisRequired;
-         }
-      }
-      
-      if (required) {
-         return ((value != null) && (value.length() > 0));
-      }
-      
-      return true;
-   }
-   
-   private static boolean isString(Object o) {
-      return o instanceof String;
-   }
-   
    public static boolean validateMask(Object bean, Field field) {
       String value = ValidatorUtils.getValueAsString(bean, field.getProperty());
       
@@ -260,17 +173,6 @@ public class BasicValidator {
             (GenericValidator.isDouble(value) && GenericValidator.isInRange(
             Double.parseDouble(value), Double.parseDouble(field.getVarValue(
             "min")), Double.parseDouble(field.getVarValue("max")))); // NOI18N
-   }
-
-   /**
-    * use validateScript(Object,Field) instead
-    */
-   @Deprecated
-   public static boolean validateJXPath(Object bean, Field field) {
-      Script script = ScriptRegistry.getInstance().getScript(ScriptRegistry.JXPATH);
-      final ScriptContext ctx = script.newContext(bean);
-
-      return !Boolean.FALSE.equals(ctx.eval(field.getVarValue("jxpath"))); // NOI18N
    }
 
    public static boolean validateScript(Object bean, Field field) {

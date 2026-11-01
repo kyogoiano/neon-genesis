@@ -33,11 +33,8 @@ public class LocalCommandExecutionAspect {
    private final Map injectorsPerThread = new WeakHashMap();
    private final Map processingThreads = new WeakHashMap();
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       Method method = ((MethodSignature)joinPoint.getSignature()).getMethod();
       if (!isLocalTestExecution(method.getDeclaringClass())) {
@@ -86,7 +83,7 @@ public class LocalCommandExecutionAspect {
                "dev.neongenesis.aspect.HibernateTransactionalInjector");
          ClassLoader loader = currentThread.getContextClassLoader();
          injector = (TransactionalInjector)Class.forName(className, true, loader)
-               .newInstance();
+               .getDeclaredConstructor().newInstance();
          injector.init(null);
          injectorsPerThread.put(currentThread, injector);
       }

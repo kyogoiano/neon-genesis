@@ -35,16 +35,6 @@ public class UIUtils {
       return instance;
    }
 
-   @Deprecated
-   public String asIdentifier(final String className) {
-      return className.replace('.', '_');
-   }
-
-   @Deprecated
-   public String asClassName(final String identifier) {
-      return identifier.replace('_', '.');
-   }
-
    public String getStackTrace(final Throwable throwable) {
       final StringWriter stringWriter = new StringWriter();
       throwable.printStackTrace(new PrintWriter(stringWriter));

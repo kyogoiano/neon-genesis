@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import dev.neongenesis.GenesisTestCase;
+import dev.neongenesis.script.ScriptRegistry;
 import org.apache.commons.beanutils.ConvertUtils;
 import org.apache.commons.beanutils.Converter;
 import org.apache.commons.beanutils.converters.BigDecimalConverter;
@@ -33,6 +34,7 @@ public class BasicValidatorTest extends GenesisTestCase {
    private Field field;
    private Var min = new Var("min", "0.1", null);
    private Var max = new Var("max", "10.1", null);
+   private Var script = new Var("script", "form.getDependency() == '10'", null);
    private Converter oldConverter;
 
    protected void setUp() {
@@ -119,5 +121,33 @@ public class BasicValidatorTest extends GenesisTestCase {
 
       map.put(BIG_DECIMAL_PROPERTY, "10.1000000000000001");
       assertFalse(BasicValidator.validateMax(map, field));
+   }
+
+   public void testValidateScript() {
+      ScriptRegistry.getInstance().setScriptFactoryName(
+            ScriptRegistry.JAVASCRIPT);
+      ScriptRegistry.getInstance().initialize();
+      field.addVar(script);
+      ScriptForm form = new ScriptForm("9");
+      assertFalse(BasicValidator.validateScript(form, field));
+
+      form.setDependency("10");
+      assertTrue(BasicValidator.validateScript(form, field));
+   }
+
+   public static class ScriptForm {
+      private String dependency;
+
+      public ScriptForm(String dependency) {
+         this.dependency = dependency;
+      }
+
+      public String getDependency() {
+         return dependency;
+      }
+
+      public void setDependency(String dependency) {
+         this.dependency = dependency;
+      }
    }
 }

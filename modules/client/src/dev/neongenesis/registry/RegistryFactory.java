@@ -55,7 +55,8 @@ public class RegistryFactory extends Registry {
 
    public Object getNewInstance(final String className, final Map attributesMap) {
       try {
-         final Object instance = ClassesCache.getClass(className).newInstance();
+         final Object instance = ClassesCache.getClass(className)
+               .getDeclaredConstructor().newInstance();
          if (attributesMap != null && !attributesMap.isEmpty()) {
             BeanUtils.populate(instance, attributesMap);
          }
@@ -69,9 +70,14 @@ public class RegistryFactory extends Registry {
       } catch (IllegalAccessException e) {
          e.printStackTrace();
          throw new RuntimeException(e);
-      } catch (InvocationTargetException e) {
+      } catch (NoSuchMethodException e) {
          e.printStackTrace();
          throw new RuntimeException(e);
+      } catch (InvocationTargetException e) {
+         Throwable cause = e.getTargetException();
+         Throwable failure = cause == null ? e : cause;
+         failure.printStackTrace();
+         throw new RuntimeException(failure);
       }
    }
 

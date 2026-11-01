@@ -72,11 +72,8 @@ public class CDICommandExecutionAspect {
       }
    }
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       if (!isCdiExecutionEnabled()) {
          return joinPoint.proceed();

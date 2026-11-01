@@ -162,10 +162,9 @@ public class ValueBean implements Serializable {
    }
 
    /**
-    * @genesis.validator type="requiredif"
+    * @genesis.validator type="script"
     * @genesis.validator-args arg0resource="validatorTest.requiredIf"
-    * @genesis.validator-var name="field[0]" value="requiredIfDependency"
-    * @genesis.validator-var name="fieldTest[0]" value="NOTNULL"
+    * @genesis.validator-var name="script" value="form.getRequiredIfDependency() == null || form.getRequiredIfDependency().trim() == '' || (form.getRequiredIf() != null && form.getRequiredIf() != '')"
     */
    public void setRequiredIf(Object requiredIf) {
       this.requiredIf = requiredIf;
@@ -304,9 +303,9 @@ public class ValueBean implements Serializable {
    }
 
    /**
-    * @genesis.validator type="jxpath"
+    * @genesis.validator type="script"
     * @genesis.validator-args arg0resource="validatorTest.jxpath"
-    * @genesis.validator-var name="jxpath" value="jxpathDependency = 10"
+    * @genesis.validator-var name="script" value="form.getJxpathDependency() == 10"
     */
    public void setJxpath(String jxpath) {
       this.jxpath = jxpath;

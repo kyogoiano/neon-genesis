@@ -50,16 +50,13 @@ public class TimeoutAspect {
       }
    }
 
-   private static final class WorkerThreadDisposer extends Thread {
+   private static final class WorkerThreadDisposer implements Runnable {
       private static WorkerThreadDisposer instance;
       private final ReferenceQueue queue = new ReferenceQueue();
       private final Collection references = new LinkedList();
 
       public WorkerThreadDisposer() {
-         super("WorkerThreadDisposer-Daemon"); // NOI18N
-         setDaemon(true);
-         setPriority(Thread.MIN_PRIORITY);
-         start();
+         Thread.ofVirtual().name("WorkerThreadDisposer-Daemon").start(this);
       }
 
       public static WorkerThreadDisposer getInstance() {
@@ -106,8 +103,9 @@ public class TimeoutAspect {
       }
    }
 
-   private static final class WorkerThread extends Thread {
+   private static final class WorkerThread implements Runnable {
       private final boolean keepThreadInstance;
+      private final Thread thread;
       private Throwable throwable;
       private Object returnValue;
       private ProceedingJoinPoint jp;
@@ -117,8 +115,9 @@ public class TimeoutAspect {
       private boolean waiting;
 
       public WorkerThread(boolean keepThreadInstance) {
-         super("WorkerThread-" + Thread.currentThread().getName()); // NOI18N
-         setDaemon(true);
+         thread = Thread.ofVirtual()
+               .name("WorkerThread-" + Thread.currentThread().getName())
+               .unstarted(this);
          this.keepThreadInstance = keepThreadInstance;
       }
 
@@ -131,7 +130,7 @@ public class TimeoutAspect {
 
          if (!started) {
             started = true;
-            start();
+            thread.start();
          } else {
             synchronized (lock) {
                lock.notifyAll();
@@ -199,8 +198,16 @@ public class TimeoutAspect {
          return throwable;
       }
 
+      public void interrupt() {
+         thread.interrupt();
+      }
+
       public boolean isRunning() {
          return running;
+      }
+
+      public String toString() {
+         return thread.toString();
       }
 
       public void cleanUp() {

@@ -16,6 +16,9 @@
  */
 package dev.neongenesis.ui.javafx;
 
+import java.io.IOException;
+import java.net.URL;
+
 import dev.neongenesis.GenesisTestCase;
 import dev.neongenesis.mockobjects.MockForm;
 import dev.neongenesis.ui.binding.AbstractBinder;
@@ -28,6 +31,7 @@ import dev.neongenesis.ui.javafx.components.TableViewNodeBinder;
 import dev.neongenesis.ui.javafx.components.TextInputControlNodeBinder;
 import dev.neongenesis.ui.javafx.components.ToggleButtonNodeBinder;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -91,5 +95,53 @@ public class JavaFXBinderTest extends GenesisTestCase {
       assertSame(customNode, binder.lookup("customWidget"));
       assertEquals("customWidget", binder.getName(customNode));
       assertTrue(binder.isVirtual(customNode));
+   }
+
+   public void testLoadAndBindFXMLView() throws IOException {
+      URL location = getClass().getResource("test-view.fxml");
+      assertNotNull(location);
+
+      MockForm form = new MockForm();
+      FXMLView<TestViewController> view = FXMLView.load(location, form);
+      try {
+         assertTrue(view.getRoot() instanceof Node);
+         assertNotNull(view.getController());
+         assertSame(form, view.getBinder().getForm());
+         assertEquals(Boolean.TRUE, view.getRoot().getProperties()
+               .get(AbstractBinder.GENESIS_BOUND));
+      } finally {
+         view.close();
+      }
+
+      assertEquals(Boolean.FALSE, view.getRoot().getProperties()
+            .get(AbstractBinder.GENESIS_BOUND));
+   }
+
+   public void testControllerFactoryIsUsedWhenLoadingFXML() throws IOException {
+      URL location = getClass().getResource("test-view.fxml");
+      TestViewController controller = new TestViewController();
+
+      FXMLView<TestViewController> view = FXMLView.load(location,
+            new MockForm(), type -> controller);
+      try {
+         assertSame(controller, view.getController());
+      } finally {
+         view.close();
+      }
+   }
+
+   public void testFXMLWithoutControllerIsRejected() throws IOException {
+      URL location = getClass().getResource("view-without-controller.fxml");
+      assertNotNull(location);
+
+      try {
+         FXMLView.load(location, new MockForm());
+         fail("FXML documents without a controller should be rejected");
+      } catch (IOException expected) {
+         assertTrue(expected.getMessage().contains("controller"));
+      }
+   }
+
+   public static class TestViewController {
    }
 }

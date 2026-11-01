@@ -175,18 +175,10 @@ public class StartupHelper {
          return;
       }
 
-      final Thread t = new Thread("NoopCommand-Daemon") { // NOI18N
-         {
-            setDaemon(true);
-         }
-
-         public void run() {
-            new NoopCommand().remotable();
-            log.info("Noop command executed"); // NOI18N
-         }
-      };
-
-      t.start();
+      Thread.ofVirtual().name("NoopCommand-Daemon").start(() -> { // NOI18N
+         new NoopCommand().remotable();
+         log.info("Noop command executed"); // NOI18N
+      });
    }
 
    public boolean isLoadValidatorRules() {
@@ -202,18 +194,10 @@ public class StartupHelper {
          return;
       }
 
-      final Thread t = new Thread("ValidatorRulesLoader-Daemon") { // NOI18N
-         {
-            setDaemon(true);
-         }
-
-         public void run() {
-            ValidationUtils.getInstance();
-            log.info("Validation rules loaded"); // NOI18N
-         }
-      };
-
-      t.start();
+      Thread.ofVirtual().name("ValidatorRulesLoader-Daemon").start(() -> { // NOI18N
+         ValidationUtils.getInstance();
+         log.info("Validation rules loaded"); // NOI18N
+      });
    }
 
    public void initialize() {

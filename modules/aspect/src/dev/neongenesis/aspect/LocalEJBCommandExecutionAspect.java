@@ -39,11 +39,8 @@ public class LocalEJBCommandExecutionAspect {
    private final ThreadLocal threadLocal = new InheritableThreadLocal();
    private CommandExecutorLocal session;
 
-   @Pointcut("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Pointcut("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public void commandExecution() {
    }
 

@@ -115,12 +115,12 @@ public class Criteria {
    }
 
    public Criteria setFirstResult(final int firstResult) {
-      this.firstResult = Integer.valueOf(firstResult);
+      this.firstResult = firstResult;
       return this;
    }
 
    public Criteria setMaxResults(final int maxResults) {
-      this.maxResults = Integer.valueOf(maxResults);
+      this.maxResults = maxResults;
       return this;
    }
 
@@ -138,10 +138,10 @@ public class Criteria {
       }
       final Query query = session.createQuery(criteriaQuery);
       if (firstResult != null) {
-         query.setFirstResult(firstResult.intValue());
+         query.setFirstResult(firstResult);
       }
       if (maxResults != null) {
-         query.setMaxResults(maxResults.intValue());
+         query.setMaxResults(maxResults);
       }
       return query;
    }

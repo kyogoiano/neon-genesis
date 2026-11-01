@@ -21,7 +21,9 @@ import javax.naming.InitialContext;
 import jakarta.transaction.Status;
 import jakarta.transaction.UserTransaction;
 
-import dev.neongenesis.command.Transaction;
+import java.io.Serializable;
+
+import dev.neongenesis.annotation.Transactional;
 import dev.neongenesis.tests.TestCase;
 
 
@@ -40,10 +42,12 @@ public class NoopTransactionTest extends TestCase {
         assertTrue(transaction.value == 0);
     }
 
-    public static class NoopTransaction implements Transaction {
+    public static class NoopTransaction implements Serializable {
+        private static final long serialVersionUID = 1L;
 
         private int value;
 
+        @Transactional
         public int invokeTransactional() throws Exception {
             value++;
             return ((UserTransaction) new InitialContext().lookup(

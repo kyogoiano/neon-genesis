@@ -93,15 +93,17 @@ public class EJBHibernateTransactionalInjectorTest extends TestCase {
 
       @Remotable
       public HibernateBean getBean(final String code) throws Exception {
-         final Query query = getSession().createQuery(
-               "from HibernateBean bean where bean.code = :code");
+         final Query<HibernateBean> query = getSession().createQuery(
+               "from HibernateBean bean where bean.code = :code",
+               HibernateBean.class);
          query.setParameter("code", code);
          return (HibernateBean) query.uniqueResult();
       }
 
       @Remotable
       public List getBeans() throws Exception {
-         final Query query = getSession().createQuery("from HibernateBean");
+         final Query<HibernateBean> query = getSession().createQuery(
+               "from HibernateBean", HibernateBean.class);
          return query.list();
       }
 

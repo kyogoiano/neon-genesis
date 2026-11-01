@@ -17,11 +17,13 @@
  */
 package dev.neongenesis.tests.commands;
 
+import java.io.Serializable;
+
 import javax.naming.InitialContext;
 import jakarta.transaction.Status;
 import jakarta.transaction.UserTransaction;
 
-import dev.neongenesis.command.Query;
+import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.tests.TestCase;
 
 
@@ -41,10 +43,12 @@ public class NoopQueryTest extends TestCase {
 
     }
 
-    public static class NoopQuery implements Query {
+    public static class NoopQuery implements Serializable {
+        private static final long serialVersionUID = 1L;
 
         private int value;
 
+        @Remotable
         public int invokeRemotable() throws Exception {
             value++;
             return ((UserTransaction) new InitialContext().lookup(

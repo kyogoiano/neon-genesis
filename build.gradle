@@ -79,6 +79,8 @@ project(':server') {
         api libs.jakarta.cdi.api
         api libs.jakarta.inject.api
         api libs.jakarta.interceptor.api
+        compileOnlyApi libs.jakarta.json.bind.api
+        compileOnlyApi libs.jakarta.json.api
         implementation libs.helidon.webserver
         implementation libs.helidon.webclient
         compileOnly libs.jakarta.annotation.api
@@ -92,6 +94,7 @@ project(':client') {
     sourceSets.test.java.setSrcDirs(['test-src'])
     sourceSets.test.resources.setSrcDirs(['test-src'])
     sourceSets.test.resources.include('**/*.properties')
+    sourceSets.test.resources.include('**/*.fxml')
     evaluationDependsOn(':aspect')
     dependencies {
         implementation project(':shared')
@@ -181,6 +184,8 @@ project(':tests') {
         integrationTestImplementation libs.jandex
         integrationTestImplementation libs.helidon.webserver
         integrationTestImplementation libs.helidon.webclient
+        integrationTestImplementation libs.yasson
+        integrationTestImplementation libs.parsson
         openLibertyRuntime libs.openliberty.runtime
         testImplementation project(':shared')
         testImplementation project(':client')

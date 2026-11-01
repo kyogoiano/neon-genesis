@@ -23,10 +23,7 @@ import javax.naming.InitialContext;
 
 import dev.neongenesis.annotation.Remotable;
 import dev.neongenesis.annotation.Transactional;
-import dev.neongenesis.command.Command;
 import dev.neongenesis.command.CommandExecutionGuard;
-import dev.neongenesis.command.Query;
-import dev.neongenesis.command.Transaction;
 import dev.neongenesis.ejb.CommandExecutor;
 
 import org.apache.commons.logging.Log;
@@ -52,11 +49,8 @@ public class EJBCommandExecutionAspect {
    private CommandExecutor session;
    private final ThreadLocal<Boolean> executingCommand = new ThreadLocal<Boolean>();
 
-   @Around("(execution(* dev.neongenesis.command.Command+.invoke*(..))"
-         + " && (execution(* dev.neongenesis.command.Query+.*(..))"
-         + " || execution(* dev.neongenesis.command.Transaction+.*(..))))"
-         + " || execution(@dev.neongenesis.annotation.Remotable * *(..))"
-         + " || execution(@dev.neongenesis.annotation.Transactional * *(..))")
+   @Around("(execution(@dev.neongenesis.annotation.Remotable * *(..))"
+         + " || execution(@dev.neongenesis.annotation.Transactional * *(..)))")
    public Object commandExecution(ProceedingJoinPoint joinPoint) throws Throwable {
       if (CDICommandExecutionAspect.isCdiExecutionEnabled()
             || LocalEJBCommandExecutionAspect.localEjbEnabled()) {
